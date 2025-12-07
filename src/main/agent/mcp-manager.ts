@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
-import { McpServerConfig, McpTool, SettingsData } from '@common/types';
+import { McpServerConfig, McpTool } from '@common/types';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
 import logger from '@/logger';
+import { McpConfigManager } from '@/mcp/mcp-config-manager';
 
 // increasing timeout for MCP client requests
 export const MCP_CLIENT_TIMEOUT = 600_000;
@@ -21,10 +22,32 @@ export class McpManager {
   private mcpConnectors: Record<string, Promise<McpConnector>> = {};
   private currentProjectDir: string | null = null;
   private currentInitId: string | null = null;
+  private configManager: McpConfigManager | null = null;
 
   async initMcpConnectors(
-    mcpServers: Record<string, McpServerConfig>,
+    configManager: McpConfigManager,
     projectDir: string | null = this.currentProjectDir,
+    forceReload = false,
+    enabledServers?: string[],
+  ): Promise<McpConnector[]> {
+    if (this.configManager !== configManager) {
+      this.configManager = configManager;
+      this.configManager.onUpdate((config) => this.handleConfigUpdate(config));
+    }
+
+    const mcpServers = await this.configManager.getMergedConfig(projectDir || undefined);
+
+    return this.syncConnectors(mcpServers, projectDir, forceReload, enabledServers);
+  }
+
+  private async handleConfigUpdate(config: Record<string, McpServerConfig>): Promise<void> {
+    logger.info('McpManager received config update, reloading connectors...');
+    await this.syncConnectors(config, this.currentProjectDir);
+  }
+
+  private async syncConnectors(
+    mcpServers: Record<string, McpServerConfig>,
+    projectDir: string | null,
     forceReload = false,
     enabledServers?: string[],
   ): Promise<McpConnector[]> {
@@ -115,10 +138,6 @@ export class McpManager {
       logger.error(`MCP Client creation failed for server during init: ${serverName}`, error);
       throw error;
     });
-  }
-
-  settingsChanged(_: SettingsData, newSettings: SettingsData) {
-    void this.initMcpConnectors(newSettings.mcpServers);
   }
 
   async close(): Promise<void> {

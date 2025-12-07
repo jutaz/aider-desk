@@ -22,6 +22,7 @@ import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
 import { migrateSettingsV15toV16 } from '@/store/migrations/v15-to-v16';
 import { migrateSettingsV16toV17 } from '@/store/migrations/v16-to-v17';
+import { migrateSettingsV17toV18 } from '@/store/migrations/v17-to-v18';
 
 export const DEFAULT_SETTINGS: SettingsData = {
   language: 'en',
@@ -43,7 +44,6 @@ export const DEFAULT_SETTINGS: SettingsData = {
     confirmBeforeEdit: false,
   },
   preferredModels: [],
-  mcpServers: {},
   llmProviders: {},
   telemetryEnabled: true,
   promptBehavior: {
@@ -82,7 +82,7 @@ interface StoreSchema {
   userId?: string;
 }
 
-const CURRENT_SETTINGS_VERSION = 17;
+const CURRENT_SETTINGS_VERSION = 18;
 
 export class Store {
   // @ts-expect-error expected to be initialized
@@ -140,7 +140,6 @@ export class Store {
           ...settings?.promptBehavior?.requireCommandConfirmation,
         },
       },
-      mcpServers: settings.mcpServers || DEFAULT_SETTINGS.mcpServers,
       server: settings.server || DEFAULT_SETTINGS.server,
     };
   }
@@ -238,6 +237,11 @@ export class Store {
         settingsVersion = 17;
       }
 
+      if (settingsVersion === 17) {
+        settings = await migrateSettingsV17toV18(settings);
+        settingsVersion = 18;
+      }
+
       this.store.set('settings', settings as SettingsData);
       this.store.set('openProjects', openProjects || []);
       this.store.set('providers', providers);
@@ -261,6 +265,9 @@ export class Store {
     // Check if agentProfiles still exists in settings (pre-v17)
     if (settings.agentProfiles) {
       return 16;
+    }
+    if (settings.mcpServers) {
+      return 17;
     }
     return CURRENT_SETTINGS_VERSION;
   }

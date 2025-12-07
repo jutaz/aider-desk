@@ -13,6 +13,7 @@ import {
   InputHistoryData,
   LogData,
   McpServerConfig,
+  McpServersUpdatedData,
   McpTool,
   Mode,
   Model,
@@ -97,6 +98,9 @@ export interface ApplicationAPI {
 
   loadMcpServerTools: (serverName: string, config?: McpServerConfig) => Promise<McpTool[] | null>;
   reloadMcpServers: (mcpServers: Record<string, McpServerConfig>, force?: boolean) => Promise<void>;
+  getMcpConfig: (scope: 'global' | 'project', projectDir?: string) => Promise<Record<string, McpServerConfig>>;
+  saveMcpConfig: (scope: 'global' | 'project', config: Record<string, McpServerConfig>, projectDir?: string) => Promise<void>;
+  addMcpServersUpdatedListener: (callback: (data: McpServersUpdatedData) => void) => () => void;
 
   createNewTask: (baseDir: string) => Promise<TaskData>;
   updateTask: (baseDir: string, id: string, updates: Partial<TaskData>) => Promise<boolean>;

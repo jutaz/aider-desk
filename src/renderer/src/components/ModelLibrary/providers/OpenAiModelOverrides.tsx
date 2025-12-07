@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, LlmProvider, OpenAiProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const OpenAiModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to OpenAiProvider format for AdvancedSettings
   const fullProvider: OpenAiProvider = {
-    ...getDefaultProviderParams('openai'),
+    ...getDefaultProviderParams(LlmProviderName.Openai),
     ...(provider as OpenAiProvider),
     ...overrides,
   };

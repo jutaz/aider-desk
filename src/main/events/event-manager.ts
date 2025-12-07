@@ -25,6 +25,8 @@ import {
   ProjectSettings,
   AgentProfile,
   AgentProfilesUpdatedData,
+  McpServerConfig,
+  McpServersUpdatedData,
 } from '@common/types';
 
 import type { BrowserWindow } from 'electron';
@@ -249,6 +251,15 @@ export class EventManager {
     };
     this.sendToMainWindow('agent-profiles-updated', data);
     this.broadcastToEventConnectors('agent-profiles-updated', data);
+  }
+
+  sendMcpServersUpdated(mcpServers: Record<string, McpServerConfig>, projectDir?: string): void {
+    const data: McpServersUpdatedData = {
+      mcpServers,
+      projectDir,
+    };
+    this.sendToMainWindow('mcp-servers-updated', data);
+    this.broadcastToEventConnectors('mcp-servers-updated', data);
   }
 
   // Task lifecycle events

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { LlmProvider, LlmProviderName } from '@common/agent';
+import { LlmProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 import { ComponentType } from 'react';
 
 import { OpenRouterModelOverrides } from './providers/OpenRouterModelOverrides';

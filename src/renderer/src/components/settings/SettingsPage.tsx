@@ -61,11 +61,6 @@ export const SettingsPage = ({ onClose, initialPageId, initialOptions, openProje
       setFontSize(originalSettings.fontSize);
     }
 
-    // Updated to use settings.mcpServers directly
-    if (originalSettings && localSettings && !isEqual(localSettings.mcpServers, originalSettings.mcpServers)) {
-      void api.reloadMcpServers(originalSettings.mcpServers || {});
-    }
-
     // Reset agent profiles to original
     setAgentProfiles(originalAgentProfiles);
     onClose();

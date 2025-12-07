@@ -13,6 +13,7 @@ import {
   InputHistoryData,
   LogData,
   McpServerConfig,
+  McpServersUpdatedData,
   McpTool,
   Mode,
   Model,
@@ -77,6 +78,7 @@ type EventDataMap = {
   'task-started': TaskData;
   'task-completed': TaskData;
   'task-cancelled': TaskData;
+  'mcp-servers-updated': McpServersUpdatedData;
 };
 
 type EventCallback<T> = (data: T) => void;
@@ -139,6 +141,7 @@ export class BrowserApi implements ApplicationAPI {
       'task-completed': new Map(),
       'task-cancelled': new Map(),
       'agent-profiles-updated': new Map(),
+      'mcp-servers-updated': new Map(),
     };
     this.apiClient = axios.create({
       baseURL: `${baseUrl}/api`,
@@ -429,6 +432,15 @@ export class BrowserApi implements ApplicationAPI {
   }
   reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void> {
     return this.post('/mcp/reload', { mcpServers, force });
+  }
+  getMcpConfig(scope: 'global' | 'project', projectDir?: string): Promise<Record<string, McpServerConfig>> {
+    return this.get('/mcp/config', { scope, projectDir });
+  }
+  saveMcpConfig(scope: 'global' | 'project', config: Record<string, McpServerConfig>, projectDir?: string): Promise<void> {
+    return this.post('/mcp/config', { scope, config, projectDir });
+  }
+  addMcpServersUpdatedListener(callback: (data: McpServersUpdatedData) => void): () => void {
+    return this.addListener('mcp-servers-updated', callback);
   }
   createNewTask(baseDir: string): Promise<TaskData> {
     return this.post('/project/tasks/new', { projectDir: baseDir });

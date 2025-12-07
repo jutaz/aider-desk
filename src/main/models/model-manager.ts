@@ -1,7 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
-import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
+import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 import {
   AgentProfile,
   Model,

@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, LlmProvider, OpenAiCompatibleProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const OpenAiCompatibleModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to OpenAiCompatibleProvider format for AdvancedSettings
   const fullProvider: OpenAiCompatibleProvider = {
-    ...getDefaultProviderParams('openai-compatible'),
+    ...getDefaultProviderParams(LlmProviderName.OpenaiCompatible),
     ...(provider as OpenAiCompatibleProvider),
     ...overrides,
   };

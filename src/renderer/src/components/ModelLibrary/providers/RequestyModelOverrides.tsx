@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, LlmProvider, RequestyProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const RequestyModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to RequestyProvider format for AdvancedSettings
   const fullProvider: RequestyProvider = {
-    ...getDefaultProviderParams('requesty'),
+    ...getDefaultProviderParams(LlmProviderName.Requesty),
     ...(provider as RequestyProvider),
     ...overrides,
   };

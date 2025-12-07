@@ -11,11 +11,10 @@ import {
 } from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaPaste, FaPlus, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
-import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
 import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -46,7 +45,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
 
-import { McpServer, McpServerForm } from './McpServerForm';
 import { McpServerItem } from './McpServerItem';
 import { GenericToolGroupItem } from './GenericToolGroupItem';
 import { AgentRules } from './AgentRules';
@@ -266,10 +264,7 @@ export const AgentSettings = ({
   selectedProfileContext,
 }: Props) => {
   const { t } = useTranslation();
-  const [isAddingMcpServer, setIsAddingMcpServer] = useState(false);
-  const [editingMcpServer, setEditingMcpServer] = useState<McpServer | null>(null);
-  const [isEditingMcpServersConfig, setIsEditingMcpServersConfig] = useState(false);
-  const [mcpServersReloadTrigger, setMcpServersReloadTrigger] = useState(0);
+  const [mcpServers, setMcpServers] = useState<Record<string, McpServerConfig>>({});
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(initialProfileId || DEFAULT_AGENT_PROFILE.id);
 
   // Profile context state for project-level profiles
@@ -280,9 +275,32 @@ export const AgentSettings = ({
   const api = useApi();
   const { models, providers } = useModelProviders();
 
+  useEffect(() => {
+    const fetchMcpServers = async () => {
+      try {
+        const config = await api.getMcpConfig('project', profileContext === 'global' ? undefined : profileContext);
+        setMcpServers(config || {});
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch MCP servers:', error);
+      }
+    };
+
+    fetchMcpServers();
+
+    const unsubscribe = api.addMcpServersUpdatedListener(() => {
+      fetchMcpServers();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [api, profileContext]);
+
   // Sync internal profileContext with selectedProfileContext prop
   useEffect(() => {
     if (selectedProfileContext !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfileContext(selectedProfileContext);
       // Update contextIndex to match the selected context
       const newIndex = contexts.indexOf(selectedProfileContext);
@@ -299,6 +317,7 @@ export const AgentSettings = ({
       if (initialProfile) {
         // Set the profile context based on the initial profile's projectDir
         const targetContext = initialProfile.projectDir || 'global';
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setProfileContext(targetContext);
 
         // Update contextIndex to match the target context
@@ -308,6 +327,7 @@ export const AgentSettings = ({
         }
 
         // Select the initial profile
+
         setSelectedProfileId(initialProfileId);
       }
     }
@@ -319,7 +339,6 @@ export const AgentSettings = ({
   const [dragging, setDragging] = useState(false);
   const [clipboardProfile, setClipboardProfile] = useState<{ profile: AgentProfile; action: 'copy' | 'cut' } | null>(null);
 
-  const { mcpServers } = settings;
   const selectedProfile = agentProfiles.find((profile) => profile.id === selectedProfileId) || null;
   const defaultProfile = agentProfiles.find((profile) => profile.id === DEFAULT_AGENT_PROFILE.id) || DEFAULT_AGENT_PROFILE;
 
@@ -350,6 +369,7 @@ export const AgentSettings = ({
   // Update filtered profiles when context changes
   useEffect(() => {
     if (filteredProfiles.length > 0 && !filteredProfiles.some((p) => p.id === selectedProfileId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedProfileId(filteredProfiles[0].id);
     } else if (filteredProfiles.length === 0) {
       setSelectedProfileId(null);
@@ -582,70 +602,6 @@ export const AgentSettings = ({
     }
   };
 
-  const handleMcpServersReload = async () => {
-    try {
-      void api.reloadMcpServers(mcpServers, true);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to reload MCP servers:', error);
-    }
-
-    setMcpServersReloadTrigger((prev) => prev + 1);
-  };
-
-  const handleMcpServerRemove = (serverName: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { [serverName]: removedServer, ...remainingServers } = settings.mcpServers;
-    setSettings({ ...settings, mcpServers: remainingServers });
-  };
-
-  const handleServersConfigSave = (servers: Record<string, McpServerConfig>) => {
-    let updatedMcpServers = { ...settings.mcpServers };
-
-    if (isAddingMcpServer) {
-      // Add new servers to the existing ones
-      updatedMcpServers = {
-        ...updatedMcpServers,
-        ...servers,
-      };
-    } else if (editingMcpServer) {
-      // If editing and the server name did not change, preserve the order
-      const oldName = editingMcpServer.name;
-      const newNames = Object.keys(servers);
-      if (newNames.length === 1 && newNames[0] === oldName) {
-        // Replace the server at the same position
-        const entries = Object.entries(updatedMcpServers);
-        const index = entries.findIndex(([name]) => name === oldName);
-        if (index !== -1) {
-          entries[index] = [oldName, servers[oldName]];
-          updatedMcpServers = Object.fromEntries(entries);
-        } else {
-          // fallback: just replace as before
-          const { [oldName]: _removed, ...rest } = updatedMcpServers;
-          updatedMcpServers = {
-            ...rest,
-            ...servers,
-          };
-        }
-      } else {
-        // Remove the old server and add the updated one(s)
-        const { [oldName]: _removed, ...rest } = updatedMcpServers;
-        updatedMcpServers = {
-          ...rest,
-          ...servers,
-        };
-      }
-    } else if (isEditingMcpServersConfig) {
-      // Replace all servers with the new set
-      updatedMcpServers = { ...servers };
-    }
-
-    setSettings({ ...settings, mcpServers: updatedMcpServers });
-    setIsAddingMcpServer(false);
-    setEditingMcpServer(null);
-    setIsEditingMcpServersConfig(false);
-  };
-
   const handleToolApprovalChange = (toolId: string, approval: ToolApprovalState) => {
     if (selectedProfile) {
       const newToolApprovals = {
@@ -674,26 +630,7 @@ export const AgentSettings = ({
     </Accordion>
   );
 
-  return isAddingMcpServer || editingMcpServer || isEditingMcpServersConfig ? (
-    <McpServerForm
-      onSave={handleServersConfigSave}
-      onCancel={() => {
-        setIsAddingMcpServer(false);
-        setEditingMcpServer(null);
-        setIsEditingMcpServersConfig(false);
-      }}
-      servers={
-        isEditingMcpServersConfig
-          ? Object.entries(settings.mcpServers).map(([name, config]) => ({
-              name,
-              config,
-            }))
-          : editingMcpServer
-            ? [editingMcpServer]
-            : undefined
-      }
-    />
-  ) : (
+  return (
     <div className="flex h-full w-full overflow-hidden">
       {/* Left List Pane */}
       <div className="w-[260px] flex-shrink-0 border-r border-border-default flex flex-col">
@@ -995,14 +932,6 @@ export const AgentSettings = ({
                               onApprovalChange={handleToolApprovalChange}
                               enabled={isServerEnabled}
                               onEnabledChange={(checked) => handleToggleServerEnabled(serverName, checked)}
-                              onRemove={() => handleMcpServerRemove(serverName)}
-                              onEdit={() =>
-                                setEditingMcpServer({
-                                  name: serverName,
-                                  config: serverConfig,
-                                })
-                              }
-                              reloadTrigger={mcpServersReloadTrigger}
                             />
                           </div>
                         );
@@ -1011,21 +940,6 @@ export const AgentSettings = ({
                     {Object.keys(mcpServers).length === 0 && (
                       <div className="text-xs text-text-muted-light my-4 text-center">{t('settings.agent.noServersConfigured')}</div>
                     )}
-                    <div className={clsx('flex flex-1 items-center justify-end mt-4', Object.keys(mcpServers).length === 0 && 'justify-center')}>
-                      {Object.keys(mcpServers).length > 0 && (
-                        <>
-                          <Button variant="text" className="ml-2 text-xs" onClick={() => setIsEditingMcpServersConfig(true)}>
-                            <FaPencilAlt className="mr-1.5 w-2.5 h-2.5" /> {t('settings.agent.editConfig')}
-                          </Button>
-                          <Button variant="text" className="ml-2 text-xs" onClick={handleMcpServersReload}>
-                            <FaSyncAlt className="mr-1.5 w-2.5 h-2.5" /> {t('settings.agent.reloadServers')}
-                          </Button>
-                        </>
-                      )}
-                      <Button onClick={() => setIsAddingMcpServer(true)} variant="text" className="ml-2 text-xs">
-                        <FaPlus className="mr-1.5 w-2.5 h-2.5" /> {t('settings.agent.addMcpServer')}
-                      </Button>
-                    </div>
                   </div>,
                   mcpServersExpanded,
                   setMcpServersExpanded,

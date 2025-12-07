@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Model, ProviderProfile } from '@common/types';
-import { LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { ModelDialog } from './ModelDialog';
 import { ProviderSelection } from './ProviderSelection';

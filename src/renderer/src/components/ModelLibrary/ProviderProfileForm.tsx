@@ -1,4 +1,5 @@
-import { getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 import { ProviderProfile } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { ComponentType, ReactNode, useEffect, useState } from 'react';
@@ -76,6 +77,7 @@ export const ProviderProfileForm = ({ provider, editProfile, providers, onSave, 
 
   useEffect(() => {
     if (editProfile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setId(editProfile.id);
       setName(editProfile.name || '');
       setParameters(editProfile.provider);

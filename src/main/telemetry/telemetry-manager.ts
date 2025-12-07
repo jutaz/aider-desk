@@ -122,7 +122,7 @@ export class TelemetryManager {
         includeRepoMap: profile.includeRepoMap,
         autoApprove: task?.autoApprove ?? false,
         enabledMcpServersCount: profile.enabledServers.length,
-        totalMcpServersCount: Object.keys(this.store.getSettings().mcpServers).length,
+        totalMcpServersCount: 0,
       },
     });
   }

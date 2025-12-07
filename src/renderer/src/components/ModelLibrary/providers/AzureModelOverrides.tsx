@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, AzureProvider, LlmProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const AzureModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to AzureProvider format for AdvancedSettings
   const fullProvider: AzureProvider = {
-    ...getDefaultProviderParams('azure'),
+    ...getDefaultProviderParams(LlmProviderName.Azure),
     ...(provider as AzureProvider),
     ...overrides,
   };

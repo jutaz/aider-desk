@@ -1,4 +1,5 @@
-import { LlmProviderName, AVAILABLE_PROVIDERS } from '@common/agent';
+import { AVAILABLE_PROVIDERS } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 import { useTranslation } from 'react-i18next';
 import { ComponentType } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';

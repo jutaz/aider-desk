@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FiEdit2, FiTrash2, FiMic } from 'react-icons/fi';
 import { clsx } from 'clsx';
 import { ProviderProfile } from '@common/types';
-import { LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 import { FaExclamationCircle } from 'react-icons/fa';
 
 import { IconButton } from '@/components/common/IconButton';

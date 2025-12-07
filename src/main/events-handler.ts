@@ -31,6 +31,7 @@ import { normalizeBaseDir } from '@common/utils';
 import type { BrowserWindow } from 'electron';
 
 import { McpManager, AgentProfileManager } from '@/agent';
+import { McpConfigManager } from '@/mcp/mcp-config-manager';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -50,6 +51,7 @@ export class EventsHandler {
     private projectManager: ProjectManager,
     private store: Store,
     private mcpManager: McpManager,
+    private mcpConfigManager: McpConfigManager,
     private versionsManager: VersionsManager,
     private modelManager: ModelManager,
     private telemetryManager: TelemetryManager,
@@ -68,7 +70,6 @@ export class EventsHandler {
     const oldSettings = this.store.getSettings();
     this.store.saveSettings(newSettings);
 
-    this.mcpManager.settingsChanged(oldSettings, newSettings);
     void this.projectManager.settingsChanged(oldSettings, newSettings);
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
 
@@ -168,7 +169,8 @@ export class EventsHandler {
 
     this.store.setOpenProjects(updatedProjects);
 
-    void this.mcpManager.initMcpConnectors(this.store.getSettings().mcpServers, baseDir);
+    await this.mcpConfigManager.setProject(baseDir);
+    void this.mcpManager.initMcpConnectors(this.mcpConfigManager, baseDir);
 
     return updatedProjects;
   }
@@ -364,11 +366,30 @@ export class EventsHandler {
     return await this.mcpManager.getMcpServerTools(serverName, config);
   }
 
+  async getMcpConfig(scope: 'global' | 'project', projectDir?: string): Promise<Record<string, McpServerConfig>> {
+    return await this.mcpConfigManager.getConfig(scope, projectDir);
+  }
+
+  async saveMcpConfig(scope: 'global' | 'project', config: Record<string, McpServerConfig>, projectDir?: string): Promise<void> {
+    if (scope === 'global') {
+      await this.mcpConfigManager.updateGlobalConfig(config);
+    } else if (scope === 'project') {
+      if (!projectDir) {
+        throw new Error('Project directory is required for project scope');
+      }
+      await this.mcpConfigManager.updateProjectConfig(projectDir, config);
+    }
+  }
+
   async reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void> {
     // Get the currently active project's base directory
     const activeProject = this.store.getOpenProjects().find((p) => p.active);
     const projectDir = activeProject ? activeProject.baseDir : null;
-    await this.mcpManager.initMcpConnectors(mcpServers, projectDir, force);
+
+    if (mcpServers) {
+      await this.mcpConfigManager.updateGlobalConfig(mcpServers);
+    }
+    await this.mcpManager.initMcpConnectors(this.mcpConfigManager, projectDir, force);
   }
 
   async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string> {

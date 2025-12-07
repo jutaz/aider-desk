@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ProviderProfile } from '@common/types';
-import { LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { ProviderSelection } from '@/components/ModelLibrary/ProviderSelection';
 import { ProviderProfileForm } from '@/components/ModelLibrary/ProviderProfileForm';

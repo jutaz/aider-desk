@@ -1,4 +1,5 @@
 import { AgentProfile, ContextMemoryMode, InvocationMode, Model, ReasoningEffort, ToolApprovalState } from '@common/types';
+import { LlmProviderName } from '@common/providers';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILES,
   AIDER_TOOL_DROP_CONTEXT_FILES,
@@ -19,25 +20,6 @@ import {
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 
-export type LlmProviderName =
-  | 'anthropic'
-  | 'azure'
-  | 'bedrock'
-  | 'cerebras'
-  | 'deepseek'
-  | 'gemini'
-  | 'gpustack'
-  | 'groq'
-  | 'lmstudio'
-  | 'minimax'
-  | 'ollama'
-  | 'openai'
-  | 'openai-compatible'
-  | 'openrouter'
-  | 'requesty'
-  | 'vertex-ai'
-  | 'zai-plan';
-
 export interface LlmProviderBase {
   name: LlmProviderName;
   disableStreaming?: boolean;
@@ -45,55 +27,37 @@ export interface LlmProviderBase {
 }
 
 export interface OllamaProvider extends LlmProviderBase {
-  name: 'ollama';
+  name: LlmProviderName.Ollama;
   baseUrl: string;
 }
 
-export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
-  'anthropic',
-  'azure',
-  'bedrock',
-  'cerebras',
-  'deepseek',
-  'gemini',
-  'gpustack',
-  'groq',
-  'lmstudio',
-  'minimax',
-  'ollama',
-  'openai',
-  'openai-compatible',
-  'openrouter',
-  'requesty',
-  'vertex-ai',
-  'zai-plan',
-];
+export const AVAILABLE_PROVIDERS: LlmProviderName[] = Object.values(LlmProviderName);
 
 export interface OpenAiProvider extends LlmProviderBase {
-  name: 'openai';
+  name: LlmProviderName.Openai;
   apiKey: string;
   reasoningEffort?: ReasoningEffort;
   useWebSearch: boolean;
 }
-export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider => provider.name === 'openai';
+export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider => provider.name === LlmProviderName.Openai;
 
 export interface AzureProvider extends LlmProviderBase {
-  name: 'azure';
+  name: LlmProviderName.Azure;
   apiKey: string;
   resourceName: string;
   apiVersion?: string;
   reasoningEffort?: ReasoningEffort;
 }
-export const isAzureProvider = (provider: LlmProviderBase): provider is AzureProvider => provider.name === 'azure';
+export const isAzureProvider = (provider: LlmProviderBase): provider is AzureProvider => provider.name === LlmProviderName.Azure;
 
 export interface AnthropicProvider extends LlmProviderBase {
-  name: 'anthropic';
+  name: LlmProviderName.Anthropic;
   apiKey: string;
 }
-export const isAnthropicProvider = (provider: LlmProviderBase): provider is AnthropicProvider => provider.name === 'anthropic';
+export const isAnthropicProvider = (provider: LlmProviderBase): provider is AnthropicProvider => provider.name === LlmProviderName.Anthropic;
 
 export interface GeminiProvider extends LlmProviderBase {
-  name: 'gemini';
+  name: LlmProviderName.Gemini;
   apiKey: string;
   customBaseUrl?: string;
   includeThoughts: boolean;
@@ -101,10 +65,10 @@ export interface GeminiProvider extends LlmProviderBase {
   useSearchGrounding: boolean;
 }
 
-export const isGeminiProvider = (provider: LlmProviderBase): provider is GeminiProvider => provider.name === 'gemini';
+export const isGeminiProvider = (provider: LlmProviderBase): provider is GeminiProvider => provider.name === LlmProviderName.Gemini;
 
 export interface VertexAiProvider extends LlmProviderBase {
-  name: 'vertex-ai';
+  name: LlmProviderName.VertexAi;
   project: string;
   location: string;
   googleCloudCredentialsJson?: string;
@@ -112,60 +76,61 @@ export interface VertexAiProvider extends LlmProviderBase {
   thinkingBudget: number;
 }
 
-export const isVertexAiProvider = (provider: LlmProviderBase): provider is VertexAiProvider => provider.name === 'vertex-ai';
+export const isVertexAiProvider = (provider: LlmProviderBase): provider is VertexAiProvider => provider.name === LlmProviderName.VertexAi;
 
 export interface LmStudioProvider extends LlmProviderBase {
-  name: 'lmstudio';
+  name: LlmProviderName.Lmstudio;
   baseUrl: string;
 }
-export const isLmStudioProvider = (provider: LlmProviderBase): provider is LmStudioProvider => provider.name === 'lmstudio';
+export const isLmStudioProvider = (provider: LlmProviderBase): provider is LmStudioProvider => provider.name === LlmProviderName.Lmstudio;
 
 export interface DeepseekProvider extends LlmProviderBase {
-  name: 'deepseek';
+  name: LlmProviderName.Deepseek;
   apiKey: string;
 }
-export const isDeepseekProvider = (provider: LlmProviderBase): provider is DeepseekProvider => provider.name === 'deepseek';
+export const isDeepseekProvider = (provider: LlmProviderBase): provider is DeepseekProvider => provider.name === LlmProviderName.Deepseek;
 
 export interface GroqProvider extends LlmProviderBase {
-  name: 'groq';
+  name: LlmProviderName.Groq;
   apiKey: string;
 }
-export const isGroqProvider = (provider: LlmProviderBase): provider is GroqProvider => provider.name === 'groq';
+export const isGroqProvider = (provider: LlmProviderBase): provider is GroqProvider => provider.name === LlmProviderName.Groq;
 
 export interface CerebrasProvider extends LlmProviderBase {
-  name: 'cerebras';
+  name: LlmProviderName.Cerebras;
   apiKey: string;
 }
-export const isCerebrasProvider = (provider: LlmProviderBase): provider is CerebrasProvider => provider.name === 'cerebras';
+export const isCerebrasProvider = (provider: LlmProviderBase): provider is CerebrasProvider => provider.name === LlmProviderName.Cerebras;
 
 export interface BedrockProvider extends LlmProviderBase {
-  name: 'bedrock';
+  name: LlmProviderName.Bedrock;
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
   sessionToken?: string;
 }
-export const isBedrockProvider = (provider: LlmProviderBase): provider is BedrockProvider => provider.name === 'bedrock';
+export const isBedrockProvider = (provider: LlmProviderBase): provider is BedrockProvider => provider.name === LlmProviderName.Bedrock;
 
 export interface OpenAiCompatibleProvider extends LlmProviderBase {
-  name: 'openai-compatible';
+  name: LlmProviderName.OpenaiCompatible;
   apiKey: string;
   baseUrl?: string;
   reasoningEffort?: ReasoningEffort;
 }
-export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider is OpenAiCompatibleProvider => provider.name === 'openai-compatible';
+export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider is OpenAiCompatibleProvider =>
+  provider.name === LlmProviderName.OpenaiCompatible;
 
-export const isOllamaProvider = (provider: LlmProviderBase): provider is OllamaProvider => provider.name === 'ollama';
+export const isOllamaProvider = (provider: LlmProviderBase): provider is OllamaProvider => provider.name === LlmProviderName.Ollama;
 
 export interface GpustackProvider extends LlmProviderBase {
-  name: 'gpustack';
+  name: LlmProviderName.Gpustack;
   apiKey?: string;
   baseUrl?: string;
 }
-export const isGpustackProvider = (provider: LlmProviderBase): provider is GpustackProvider => provider.name === 'gpustack';
+export const isGpustackProvider = (provider: LlmProviderBase): provider is GpustackProvider => provider.name === LlmProviderName.Gpustack;
 
 export interface OpenRouterProvider extends LlmProviderBase {
-  name: 'openrouter';
+  name: LlmProviderName.Openrouter;
   apiKey: string;
   // Advanced routing options
   requireParameters: boolean;
@@ -177,27 +142,27 @@ export interface OpenRouterProvider extends LlmProviderBase {
   quantizations: string[];
   sort: 'price' | 'throughput' | null;
 }
-export const isOpenRouterProvider = (provider: LlmProviderBase): provider is OpenRouterProvider => provider.name === 'openrouter';
+export const isOpenRouterProvider = (provider: LlmProviderBase): provider is OpenRouterProvider => provider.name === LlmProviderName.Openrouter;
 
 export interface RequestyProvider extends LlmProviderBase {
-  name: 'requesty';
+  name: LlmProviderName.Requesty;
   apiKey: string;
   useAutoCache: boolean;
   reasoningEffort: ReasoningEffort;
 }
-export const isRequestyProvider = (provider: LlmProviderBase): provider is RequestyProvider => provider.name === 'requesty';
+export const isRequestyProvider = (provider: LlmProviderBase): provider is RequestyProvider => provider.name === LlmProviderName.Requesty;
 
 export interface ZaiPlanProvider extends LlmProviderBase {
-  name: 'zai-plan';
+  name: LlmProviderName.ZaiPlan;
   apiKey: string;
 }
-export const isZaiPlanProvider = (provider: LlmProviderBase): provider is ZaiPlanProvider => provider.name === 'zai-plan';
+export const isZaiPlanProvider = (provider: LlmProviderBase): provider is ZaiPlanProvider => provider.name === LlmProviderName.ZaiPlan;
 
 export interface MinimaxProvider extends LlmProviderBase {
-  name: 'minimax';
+  name: LlmProviderName.Minimax;
   apiKey: string;
 }
-export const isMinimaxProvider = (provider: LlmProviderBase): provider is MinimaxProvider => provider.name === 'minimax';
+export const isMinimaxProvider = (provider: LlmProviderBase): provider is MinimaxProvider => provider.name === LlmProviderName.Minimax;
 
 export type LlmProvider =
   | OpenAiProvider
@@ -221,27 +186,27 @@ export type LlmProvider =
 export const DEFAULT_MODEL_TEMPERATURE = 0.0;
 
 export const DEFAULT_PROVIDER_MODELS: Partial<Record<LlmProviderName, string>> = {
-  anthropic: 'claude-sonnet-4-5-20250929',
-  cerebras: 'qwen-3-235b-a22b-instruct-2507',
-  deepseek: 'deepseek-chat',
-  gemini: 'gemini-3-pro',
-  groq: 'moonshotai/kimi-k2-instruct-0905',
-  openai: 'gpt-5.1-codex',
-  openrouter: 'anthropic/claude-sonnet-4.5',
-  requesty: 'anthropic/claude-sonnet-4-5',
-  'zai-plan': 'glm-4.6',
-  minimax: 'MiniMax-M2',
+  [LlmProviderName.Anthropic]: 'claude-sonnet-4-5-20250929',
+  [LlmProviderName.Cerebras]: 'qwen-3-235b-a22b-instruct-2507',
+  [LlmProviderName.Deepseek]: 'deepseek-chat',
+  [LlmProviderName.Gemini]: 'gemini-3-pro',
+  [LlmProviderName.Groq]: 'moonshotai/kimi-k2-instruct-0905',
+  [LlmProviderName.Openai]: 'gpt-5.1-codex',
+  [LlmProviderName.Openrouter]: 'anthropic/claude-sonnet-4.5',
+  [LlmProviderName.Requesty]: 'anthropic/claude-sonnet-4-5',
+  [LlmProviderName.ZaiPlan]: 'glm-4.6',
+  [LlmProviderName.Minimax]: 'MiniMax-M2',
 };
 
-export const DEFAULT_AIDER_MAIN_MODEL = `anthropic/${DEFAULT_PROVIDER_MODELS.anthropic}`;
+export const DEFAULT_AIDER_MAIN_MODEL = `${LlmProviderName.Anthropic}/${DEFAULT_PROVIDER_MODELS[LlmProviderName.Anthropic]}`;
 
 const DEFAULT_AGENT_PROFILE_ID = 'default';
 
 export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   id: DEFAULT_AGENT_PROFILE_ID,
   name: 'Default Agent',
-  provider: 'anthropic',
-  model: DEFAULT_PROVIDER_MODELS.anthropic!,
+  provider: LlmProviderName.Anthropic,
+  model: DEFAULT_PROVIDER_MODELS[LlmProviderName.Anthropic]!,
   maxIterations: 100,
   minTimeBetweenToolCalls: 0,
   toolApprovals: {
@@ -394,30 +359,30 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
   };
 
   switch (providerName) {
-    case 'openai':
+    case LlmProviderName.Openai:
       provider = {
-        name: 'openai',
+        name: LlmProviderName.Openai,
         apiKey: '',
         useWebSearch: false,
       } satisfies OpenAiProvider;
       break;
-    case 'azure':
+    case LlmProviderName.Azure:
       provider = {
-        name: 'azure',
+        name: LlmProviderName.Azure,
         apiKey: '',
         resourceName: '',
         apiVersion: '',
       } satisfies AzureProvider;
       break;
-    case 'anthropic':
+    case LlmProviderName.Anthropic:
       provider = {
-        name: 'anthropic',
+        name: LlmProviderName.Anthropic,
         apiKey: '',
       } satisfies AnthropicProvider;
       break;
-    case 'gemini':
+    case LlmProviderName.Gemini:
       provider = {
-        name: 'gemini',
+        name: LlmProviderName.Gemini,
         apiKey: '',
         useSearchGrounding: false,
         includeThoughts: false,
@@ -425,9 +390,9 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         customBaseUrl: '',
       } satisfies GeminiProvider;
       break;
-    case 'vertex-ai':
+    case LlmProviderName.VertexAi:
       provider = {
-        name: 'vertex-ai',
+        name: LlmProviderName.VertexAi,
         project: '',
         location: '',
         googleCloudCredentialsJson: '',
@@ -435,56 +400,56 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         thinkingBudget: 0,
       } satisfies VertexAiProvider;
       break;
-    case 'groq':
+    case LlmProviderName.Groq:
       provider = {
-        name: 'groq',
+        name: LlmProviderName.Groq,
         apiKey: '',
       } satisfies GroqProvider;
       break;
-    case 'gpustack':
+    case LlmProviderName.Gpustack:
       provider = {
-        name: 'gpustack',
+        name: LlmProviderName.Gpustack,
         apiKey: '',
         baseUrl: 'http://localhost',
       } satisfies GpustackProvider;
       break;
-    case 'cerebras':
+    case LlmProviderName.Cerebras:
       provider = {
-        name: 'cerebras',
+        name: LlmProviderName.Cerebras,
         apiKey: '',
       } satisfies CerebrasProvider;
       break;
-    case 'deepseek':
+    case LlmProviderName.Deepseek:
       provider = {
-        name: 'deepseek',
+        name: LlmProviderName.Deepseek,
         apiKey: '',
       } satisfies DeepseekProvider;
       break;
-    case 'bedrock':
+    case LlmProviderName.Bedrock:
       provider = {
-        name: 'bedrock',
+        name: LlmProviderName.Bedrock,
         accessKeyId: '',
         secretAccessKey: '',
         region: 'us-east-1', // Default region
       } satisfies BedrockProvider;
       break;
-    case 'openai-compatible':
+    case LlmProviderName.OpenaiCompatible:
       provider = {
-        name: 'openai-compatible',
+        name: LlmProviderName.OpenaiCompatible,
         apiKey: '',
         baseUrl: '',
         reasoningEffort: ReasoningEffort.None,
       } satisfies OpenAiCompatibleProvider;
       break;
-    case 'ollama':
+    case LlmProviderName.Ollama:
       provider = {
-        name: 'ollama',
+        name: LlmProviderName.Ollama,
         baseUrl: 'http://localhost:11434/api',
       } satisfies OllamaProvider;
       break;
-    case 'openrouter':
+    case LlmProviderName.Openrouter:
       provider = {
-        name: 'openrouter',
+        name: LlmProviderName.Openrouter,
         apiKey: '',
         order: [],
         allowFallbacks: true,
@@ -496,29 +461,29 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         requireParameters: false,
       } satisfies OpenRouterProvider;
       break;
-    case 'lmstudio':
+    case LlmProviderName.Lmstudio:
       provider = {
-        name: 'lmstudio',
+        name: LlmProviderName.Lmstudio,
         baseUrl: 'http://localhost:1234/v1',
       } satisfies LmStudioProvider;
       break;
-    case 'requesty':
+    case LlmProviderName.Requesty:
       provider = {
-        name: 'requesty',
+        name: LlmProviderName.Requesty,
         apiKey: '',
         useAutoCache: true,
         reasoningEffort: ReasoningEffort.None,
       } satisfies RequestyProvider;
       break;
-    case 'zai-plan':
+    case LlmProviderName.ZaiPlan:
       provider = {
-        name: 'zai-plan',
+        name: LlmProviderName.ZaiPlan,
         apiKey: '',
       } satisfies ZaiPlanProvider;
       break;
-    case 'minimax':
+    case LlmProviderName.Minimax:
       provider = {
-        name: 'minimax',
+        name: LlmProviderName.Minimax,
         apiKey: '',
       } satisfies MinimaxProvider;
       break;

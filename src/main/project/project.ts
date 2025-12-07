@@ -6,6 +6,7 @@ import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 import { AgentProfileManager, McpManager } from '@/agent';
+import { McpConfigManager } from '@/mcp/mcp-config-manager';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
@@ -34,6 +35,7 @@ export class Project {
     public readonly baseDir: string,
     private readonly store: Store,
     private readonly mcpManager: McpManager,
+    private readonly mcpConfigManager: McpConfigManager,
     private readonly telemetryManager: TelemetryManager,
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
@@ -100,6 +102,7 @@ export class Project {
       taskId,
       this.store,
       this.mcpManager,
+      this.mcpConfigManager,
       this.customCommandManager,
       this.agentProfileManager,
       this.telemetryManager,

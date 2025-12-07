@@ -27,6 +27,7 @@ export const PID_FILES_DIR = path.join(AIDER_DESK_DATA_DIR, 'aider-processes');
 export const AIDER_DESK_DIR = '.aider-desk';
 export const AIDER_DESK_TASKS_DIR = path.join(AIDER_DESK_DIR, 'tasks');
 export const AIDER_DESK_TODOS_FILE = 'todos.json';
+export const AIDER_DESK_MCP_SERVERS_FILE = 'mcp-servers.json';
 export const AIDER_DESK_RULES_DIR = 'rules';
 export const AIDER_DESK_PROJECT_RULES_DIR = path.join(AIDER_DESK_DIR, AIDER_DESK_RULES_DIR);
 export const AIDER_DESK_GLOBAL_RULES_DIR = path.join(homedir(), AIDER_DESK_DIR, AIDER_DESK_RULES_DIR);

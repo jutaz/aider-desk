@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, LlmProvider, OpenRouterProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const OpenRouterModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to OpenRouterProvider format for AdvancedSettings
   const fullProvider: OpenRouterProvider = {
-    ...getDefaultProviderParams('openrouter'),
+    ...getDefaultProviderParams(LlmProviderName.Openrouter),
     ...(provider as OpenRouterProvider),
     ...overrides,
   };

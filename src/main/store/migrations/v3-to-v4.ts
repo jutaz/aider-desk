@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { SettingsData } from '@common/types';
-import { DEFAULT_AGENT_PROFILE, LlmProvider, LlmProviderName } from '@common/agent';
+import { DEFAULT_AGENT_PROFILE, LlmProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 export const migrateSettingsV3toV4 = (settingsV3: any): SettingsData => {
   const { agentConfig, ...restOfSettings } = settingsV3;

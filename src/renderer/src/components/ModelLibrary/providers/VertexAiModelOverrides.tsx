@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, LlmProvider, VertexAiProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const VertexAiModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to VertexAiProvider format for AdvancedSettings
   const fullProvider: VertexAiProvider = {
-    ...getDefaultProviderParams('vertex-ai'),
+    ...getDefaultProviderParams(LlmProviderName.VertexAi),
     ...(provider as VertexAiProvider),
     ...overrides,
   };

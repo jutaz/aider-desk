@@ -45,6 +45,7 @@ import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
 import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_GLOBAL_RULES_DIR } from '@/constants';
 import { Agent, AgentProfileManager, McpManager } from '@/agent';
+import { McpConfigManager } from '@/mcp/mcp-config-manager';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
@@ -88,6 +89,7 @@ export class Task {
     public readonly taskId: string,
     private readonly store: Store,
     private readonly mcpManager: McpManager,
+    private readonly mcpConfigManager: McpConfigManager,
     private readonly customCommandManager: CustomCommandManager,
     private readonly agentProfileManager: AgentProfileManager,
     private readonly telemetryManager: TelemetryManager,
@@ -112,7 +114,7 @@ export class Task {
     };
     this.taskDataPath = path.join(this.project.baseDir, AIDER_DESK_TASKS_DIR, this.taskId, 'settings.json');
     this.contextManager = new ContextManager(this, this.taskId);
-    this.agent = new Agent(this.store, this.agentProfileManager, this.mcpManager, this.modelManager, this.telemetryManager);
+    this.agent = new Agent(this.store, this.agentProfileManager, this.mcpManager, this.mcpConfigManager, this.modelManager, this.telemetryManager);
     this.git = simpleGit(this.project.baseDir);
     this.aiderManager = new AiderManager(this, this.store, this.modelManager, this.eventManager, () => this.connectors);
 

@@ -31,7 +31,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
-import { LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 // @ts-expect-error istextorbinary is not typed properly
@@ -49,6 +49,7 @@ import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 
+import { McpConfigManager } from '@/mcp/mcp-config-manager';
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 import { Store } from '@/store';
@@ -70,6 +71,7 @@ export class Agent {
     private readonly store: Store,
     private readonly agentProfileManager: AgentProfileManager,
     private readonly mcpManager: McpManager,
+    private readonly mcpConfigManager: McpConfigManager,
     private readonly modelManager: ModelManager,
     private readonly telemetryManager: TelemetryManager,
   ) {}
@@ -560,7 +562,7 @@ export class Agent {
 
     try {
       // reinitialize MCP clients for the current task and wait for them to be ready
-      await this.mcpManager.initMcpConnectors(settings.mcpServers, task.getTaskDir(), false, profile.enabledServers);
+      await this.mcpManager.initMcpConnectors(this.mcpConfigManager, task.getTaskDir(), false, profile.enabledServers);
     } catch (error) {
       logger.error('Error reinitializing MCP clients:', error);
       task.addLogMessage('error', `Error reinitializing MCP clients: ${error}`, false, promptContext);

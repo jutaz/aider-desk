@@ -430,7 +430,6 @@ export interface SettingsData {
   };
   preferredModels: string[];
 
-  mcpServers: Record<string, McpServerConfig>;
   llmProviders: {
     openai?: OpenAiProvider;
     anthropic?: AnthropicProvider;
@@ -574,6 +573,17 @@ export interface McpServerConfig {
   env?: Readonly<Record<string, string>>;
   url?: string;
   headers?: Readonly<Record<string, string>>;
+}
+
+export type McpServerScope = 'global' | 'project';
+
+export interface McpServersConfig {
+  mcpServers: Record<string, McpServerConfig>;
+}
+
+export interface McpServersUpdatedData {
+  mcpServers: Record<string, McpServerConfig>;
+  projectDir?: string;
 }
 
 export interface VersionsInfo {

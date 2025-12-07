@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
-import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
+import { AgentProfile, McpServerConfig, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -14,7 +14,6 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
-import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useAgents } from '@/contexts/AgentsContext';
@@ -30,7 +29,6 @@ type Props = {
 
 export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: Props) => {
   const { t } = useTranslation();
-  const { settings } = useSettings();
   const { projectSettings, saveProjectSettings } = useProjectSettings();
   const { getProfiles, updateProfile } = useAgents();
   const [selectorVisible, setSelectorVisible] = useState(false);
@@ -44,7 +42,30 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   const activeProfile = useMemo(() => {
     return resolveAgentProfile(task, projectSettings?.agentProfileId, profiles);
   }, [task, projectSettings?.agentProfileId, profiles]);
-  const { mcpServers = {} } = settings || {};
+
+  const [mcpServers, setMcpServers] = useState<Record<string, McpServerConfig>>({});
+
+  useEffect(() => {
+    const fetchMcpServers = async () => {
+      try {
+        const config = await api.getMcpConfig('project', projectDir);
+        setMcpServers(config || {});
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch MCP servers:', error);
+      }
+    };
+
+    fetchMcpServers();
+
+    const unsubscribe = api.addMcpServersUpdatedListener(() => {
+      fetchMcpServers();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [api, projectDir]);
   const { enabledServers = [], toolApprovals = {} } = activeProfile || {};
   const handleToggleProfileSetting = useCallback(
     (setting: keyof AgentProfile, value: boolean) => {

@@ -211,6 +211,14 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.loadMcpServerTools(serverName, config);
   });
 
+  ipcMain.handle('get-mcp-config', async (_, scope: 'global' | 'project', projectDir?: string) => {
+    return await eventsHandler.getMcpConfig(scope, projectDir);
+  });
+
+  ipcMain.handle('save-mcp-config', async (_, scope: 'global' | 'project', config: Record<string, McpServerConfig>, projectDir?: string) => {
+    await eventsHandler.saveMcpConfig(scope, config, projectDir);
+  });
+
   ipcMain.handle('reload-mcp-servers', async (_, mcpServers: Record<string, McpServerConfig>, force = false) => {
     await eventsHandler.reloadMcpServers(mcpServers, force);
   });

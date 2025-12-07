@@ -23,12 +23,53 @@ const ReloadMcpServersSchema = z.object({
   force: z.boolean().optional(),
 });
 
+const GetMcpConfigSchema = z.object({
+  scope: z.enum(['global', 'project']),
+  projectDir: z.string().optional(),
+});
+
+const SaveMcpConfigSchema = z.object({
+  scope: z.enum(['global', 'project']),
+  config: z.record(z.string(), McpServerConfigSchema),
+  projectDir: z.string().optional(),
+});
+
 export class McpApi extends BaseApi {
   constructor(private readonly eventsHandler: EventsHandler) {
     super();
   }
 
   registerRoutes(router: Router): void {
+    // Get MCP config
+    router.get(
+      '/mcp/config',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(GetMcpConfigSchema, req.query, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { scope, projectDir } = parsed;
+        const config = await this.eventsHandler.getMcpConfig(scope, projectDir);
+        res.status(200).json(config);
+      }),
+    );
+
+    // Save MCP config
+    router.post(
+      '/mcp/config',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(SaveMcpConfigSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { scope, config, projectDir } = parsed;
+        await this.eventsHandler.saveMcpConfig(scope, config, projectDir);
+        res.status(200).json({ message: 'MCP config saved' });
+      }),
+    );
+
     // Load MCP server tools
     router.post(
       '/mcp/tools',

@@ -1,4 +1,5 @@
 import { getDefaultProviderParams, GeminiProvider, LlmProvider } from '@common/agent';
+import { LlmProviderName } from '@common/providers';
 
 import { DisableStreaming } from '../DisableStreaming';
 
@@ -13,7 +14,7 @@ type Props = {
 export const GeminiModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to GeminiProvider format for AdvancedSettings
   const fullProvider: GeminiProvider = {
-    ...getDefaultProviderParams('gemini'),
+    ...getDefaultProviderParams(LlmProviderName.Gemini),
     ...(provider as GeminiProvider),
     ...overrides,
   };

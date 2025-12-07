@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import type { BrowserWindow } from 'electron';
 
 import { McpManager, AgentProfileManager } from '@/agent';
+import { McpConfigManager } from '@/mcp/mcp-config-manager';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { ProjectManager } from '@/project';
@@ -29,14 +30,18 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   const telemetryManager = new TelemetryManager(store);
   await telemetryManager.init();
 
-  // Initialize MCP manager
-  const mcpManager = new McpManager();
-  const activeProject = store.getOpenProjects().find((project) => project.active);
-
-  void mcpManager.initMcpConnectors(store.getSettings().mcpServers, activeProject?.baseDir);
-
   // Initialize event manager (no main window in headless)
   const eventManager = new EventManager(mainWindow);
+
+  // Initialize MCP Config Manager
+  const activeProject = store.getOpenProjects().find((project) => project.active);
+  const mcpConfigManager = new McpConfigManager(eventManager);
+  await mcpConfigManager.init(activeProject?.baseDir);
+
+  // Initialize MCP manager
+  const mcpManager = new McpManager();
+
+  void mcpManager.initMcpConnectors(mcpConfigManager, activeProject?.baseDir);
 
   // Initialize model manager
   const modelManager = new ModelManager(store, eventManager);
@@ -52,7 +57,17 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   await agentProfileManager.start();
 
   // Initialize project manager
-  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager, worktreeManager, agentProfileManager);
+  const projectManager = new ProjectManager(
+    store,
+    mcpManager,
+    mcpConfigManager,
+    telemetryManager,
+    dataManager,
+    eventManager,
+    modelManager,
+    worktreeManager,
+    agentProfileManager,
+  );
 
   // Initialize terminal manager
   const terminalManager = new TerminalManager(eventManager, telemetryManager);
@@ -72,6 +87,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
     projectManager,
     store,
     mcpManager,
+    mcpConfigManager,
     versionsManager,
     modelManager,
     telemetryManager,

@@ -3,7 +3,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
-import { MdTerminal } from 'react-icons/md';
+import { MdTerminal, MdDns } from 'react-icons/md';
 
 import { useApi } from '@/contexts/ApiContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
@@ -11,6 +11,7 @@ import { GeneralSettings } from '@/components/settings/GeneralSettings';
 import { AgentSettings } from '@/components/settings/agent/AgentSettings';
 import { AboutSettings } from '@/components/settings/AboutSettings';
 import { ServerSettings } from '@/components/settings/ServerSettings';
+import { McpSettings } from '@/components/settings/mcp/McpSettings';
 
 type Props = {
   settings: SettingsData;
@@ -27,7 +28,7 @@ type Props = {
   openProjects?: ProjectData[];
 };
 
-type PageId = 'general' | 'aider' | 'agents' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'mcp' | 'server' | 'about';
 
 interface SidebarItem {
   id: string;
@@ -111,6 +112,12 @@ export const Settings = ({
           label: project.baseDir.split('/').pop() || project.baseDir,
         })),
       ],
+    },
+    {
+      id: 'mcp',
+      pageId: 'mcp',
+      label: t('settings.mcpServers') || 'MCP Servers',
+      icon: <MdDns className="w-4 h-4" />,
     },
     ...(isServerManagementSupported
       ? [
@@ -209,6 +216,8 @@ export const Settings = ({
             selectedProfileContext={selectedProfileContext}
           />
         );
+      case 'mcp':
+        return <McpSettings openProjects={openProjects} />;
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':

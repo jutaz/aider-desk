@@ -8,6 +8,7 @@ import {
   InputHistoryData,
   LogData,
   McpServerConfig,
+  McpServersUpdatedData,
   ModelsData,
   OS,
   ProjectSettings,
@@ -87,6 +88,15 @@ const api: ApplicationAPI = {
 
   loadMcpServerTools: (serverName, config?: McpServerConfig) => ipcRenderer.invoke('load-mcp-server-tools', serverName, config),
   reloadMcpServers: (mcpServers, force = false) => ipcRenderer.invoke('reload-mcp-servers', mcpServers, force),
+  getMcpConfig: (scope, projectDir) => ipcRenderer.invoke('get-mcp-config', scope, projectDir),
+  saveMcpConfig: (scope, config, projectDir) => ipcRenderer.invoke('save-mcp-config', scope, config, projectDir),
+  addMcpServersUpdatedListener: (callback) => {
+    const listener = (_: Electron.IpcRendererEvent, data: McpServersUpdatedData) => callback(data);
+    ipcRenderer.on('mcp-servers-updated', listener);
+    return () => {
+      ipcRenderer.removeListener('mcp-servers-updated', listener);
+    };
+  },
 
   createNewTask: (baseDir) => ipcRenderer.invoke('create-new-task', baseDir),
   updateTask: (baseDir, id, updates) => ipcRenderer.invoke('update-task', baseDir, id, updates),
