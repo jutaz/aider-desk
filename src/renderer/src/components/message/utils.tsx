@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Group } from '@common/types';
 
 import { CustomCommandBashBlock } from './CustomCommandBashBlock';
 import { ThinkingAnswerBlock } from './ThinkingAnswerBlock';
@@ -464,46 +463,38 @@ export const areMessagesEqual = (prevMessage: Message, nextMessage: Message): bo
 
 export const groupMessagesByPromptContext = (messages: Message[]): Message[] => {
   const result: Message[] = [];
-  const groups: Record<string, Message[]> = {};
-  const latestGroupInfo: Record<string, Group> = {};
+  const groupMap = new Map<string, Message[]>();
+  const nonGroupMessages: Message[] = [];
 
-  // First pass: collect messages with groups
+  // First pass: collect messages by group
   messages.forEach((message) => {
     const groupId = message.promptContext?.group?.id;
     if (groupId) {
-      if (!groups[groupId]) {
-        groups[groupId] = [];
+      if (!groupMap.has(groupId)) {
+        groupMap.set(groupId, []);
       }
-      groups[groupId].push(message);
-      // Track the latest group information for this group ID, but only update if current group isn't finished
-      if (message.promptContext?.group && !latestGroupInfo[groupId]?.finished) {
-        latestGroupInfo[groupId] = message.promptContext.group;
-      }
+      groupMap.get(groupId)!.push(message);
+    } else {
+      nonGroupMessages.push(message);
     }
   });
 
-  messages.forEach((message) => {
-    const groupId = message.promptContext?.group?.id;
-    if (groupId && groups[groupId].length > 0) {
-      // Create GroupMessage for the first message in the group
-      const groupMessages = groups[groupId];
-      const firstMessage = groupMessages[0];
-
-      // Only create the group once
-      if (firstMessage === message) {
-        const groupMessage: GroupMessage = {
-          id: groupId,
-          type: 'group',
-          content: '',
-          group: latestGroupInfo[groupId],
-          children: groupMessages,
-        };
-        result.push(groupMessage);
-      }
-    } else if (!groupId) {
-      result.push(message);
-    }
+  // Second pass: create GroupMessages for each group
+  groupMap.forEach((groupMessages, groupId) => {
+    // Use the group info from the first message or the latest unfinished one
+    const groupInfo = groupMessages.find(m => m.promptContext?.group)?.promptContext!.group!;
+    const groupMessage: GroupMessage = {
+      id: groupId,
+      type: 'group',
+      content: '',
+      group: groupInfo,
+      children: groupMessages,
+    };
+    result.push(groupMessage);
   });
+
+  // Add non-group messages
+  result.push(...nonGroupMessages);
 
   return result;
 };

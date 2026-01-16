@@ -34,7 +34,7 @@ export const EMPTY_TASK_STATE: TaskState = {
 
 export const EMPTY_MESSAGES: Message[] = [];
 
-const taskPendingMessages = new Map<string, Message[]>();
+
 
 interface TaskStore {
   taskStateMap: Map<string, TaskState>;
@@ -51,6 +51,9 @@ interface TaskStore {
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
   setAiderTotalCost: (taskId: string, cost: number) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
+  deleteTask: (taskId: string) => void;
+  getMemoryUsage: () => { taskStates: number; messages: number; total: number };
+  logMemoryUsage: () => { taskStates: number; messages: number; total: number };
 }
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
@@ -78,24 +81,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }),
 
   setMessages: (taskId, updateMessages) => {
-    const pendingMessages = taskPendingMessages.get(taskId);
-    taskPendingMessages.set(taskId, updateMessages(pendingMessages || get().taskMessagesMap.get(taskId) || []));
-
-    if (pendingMessages) {
-      // we are already in a pending state, no need to update
-      return;
-    }
-    requestAnimationFrame(() => {
-      set((state) => {
-        if (!taskPendingMessages.has(taskId)) {
-          return state;
-        }
-
-        const newMessagesMap = new Map(state.taskMessagesMap);
-        newMessagesMap.set(taskId, taskPendingMessages.get(taskId) || []);
-        taskPendingMessages.delete(taskId);
-        return { taskMessagesMap: newMessagesMap };
-      });
+    set((state) => {
+      const newMessagesMap = new Map(state.taskMessagesMap);
+      const currentMessages = newMessagesMap.get(taskId) || [];
+      newMessagesMap.set(taskId, updateMessages(currentMessages));
+      return { taskMessagesMap: newMessagesMap };
     });
   },
 
@@ -173,6 +163,69 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       newMessagesMap.set(taskId, []);
       return { taskStateMap: newStateMap, taskMessagesMap: newMessagesMap };
     }),
+
+  deleteTask: (taskId) =>
+    set((state) => {
+      const newStateMap = new Map(state.taskStateMap);
+      const newMessagesMap = new Map(state.taskMessagesMap);
+
+      const hadState = newStateMap.has(taskId);
+      const hadMessages = newMessagesMap.has(taskId);
+      const hadPendingMessages = taskPendingMessages.has(taskId);
+
+      // Remove task state
+      newStateMap.delete(taskId);
+
+      // Remove task messages
+      newMessagesMap.delete(taskId);
+
+      // Log cleanup for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`TaskStore: Cleaned up task ${taskId}`, {
+          hadState,
+          hadMessages,
+          hadPendingMessages,
+          remainingTasks: newStateMap.size,
+          remainingMessageMaps: newMessagesMap.size,
+        });
+      }
+
+      return { taskStateMap: newStateMap, taskMessagesMap: newMessagesMap };
+    }),
+
+  getMemoryUsage: () => {
+    const state = get();
+    let messagesSize = 0;
+
+    // Calculate messages memory usage (rough estimate: ~1KB per message)
+    for (const messages of state.taskMessagesMap.values()) {
+      messagesSize += messages.length * 1024;
+    }
+
+    // Rough estimate: ~2KB per task state
+    const taskStatesSize = state.taskStateMap.size * 2048;
+
+    return {
+      taskStates: taskStatesSize,
+      messages: messagesSize,
+      total: taskStatesSize + messagesSize,
+    };
+  },
+
+  logMemoryUsage: () => {
+    const usage = get().getMemoryUsage();
+    if (process.env.NODE_ENV === 'development') {
+      console.log('TaskStore Memory Usage:', {
+        ...usage,
+        formatted: {
+          taskStates: `${(usage.taskStates / 1024).toFixed(2)} KB`,
+          messages: `${(usage.messages / 1024).toFixed(2)} KB`,
+          total: `${(usage.total / 1024).toFixed(2)} KB`,
+        },
+      });
+    }
+    return usage;
+  },
 }));
 
 export const useTaskState = (taskId: string) => useTaskStore((state) => state.taskStateMap.get(taskId) || EMPTY_TASK_STATE);

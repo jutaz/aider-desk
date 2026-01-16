@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { LocalizedString, UsageReportData } from '@common/types';
+import { PerformanceProfiler, usePerformanceMonitor } from '@/hooks/usePerformanceMonitor';
 
 import { MessageBlock } from './MessageBlock';
 import { MessageBar } from './MessageBar';
@@ -25,11 +26,57 @@ type Props = {
 const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, remove, redo, edit }: Props) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [loadedChildren, setLoadedChildren] = useState<Message[] | null>(null);
+  const [isLoadingChildren, setIsLoadingChildren] = useState(false);
+  const { trackLazyLoading } = usePerformanceMonitor('GroupMessageBlock');
+
+  // Lazy loading effect
+  useEffect(() => {
+    if (loadedChildren === null) {
+      // Initialize based on message size and whether group is finished
+      if (!message.group.finished || message.children.length <= 10) {
+        // Unfinished group (streaming) or small thread: load immediately
+        setLoadedChildren(message.children);
+      } else {
+        // Large finished thread: start empty, load on demand
+        setLoadedChildren([]);
+      }
+    }
+
+    if (isOpen && loadedChildren !== null && loadedChildren.length === 0 && message.children.length > 10 && message.group.finished && !isLoadingChildren) {
+      // Load children for large finished thread when expanded
+      setIsLoadingChildren(true);
+      trackLazyLoading('load-start', undefined, message.children.length);
+      // Simulate async loading (in real app, this might be fetching from server or heavy computation)
+      const loadChildren = async () => {
+        const startTime = Date.now();
+        // Small delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setLoadedChildren(message.children);
+        setIsLoadingChildren(false);
+        const duration = Date.now() - startTime;
+        trackLazyLoading('load-end', duration, message.children.length);
+      };
+      loadChildren();
+    }
+
+    return () => {
+      // Cleanup: keep loadedChildren to avoid reloading on re-expand
+    };
+  }, [isOpen, loadedChildren, message.children, message.group.finished, isLoadingChildren]);
+
+  // Sync loadedChildren with message.children for real-time updates
+  useEffect(() => {
+    if (loadedChildren !== null && (!message.group.finished || loadedChildren.length > 0)) {
+      setLoadedChildren(message.children);
+    }
+  }, [message.children, message.group.finished]);
 
   const previewMessage = useMemo(() => {
-    const messages = message.children.filter((msg) => isResponseMessage(msg) || isToolMessage(msg) || isUserMessage(msg)).reverse();
+    const childrenToUse = loadedChildren || message.children;
+    const messages = childrenToUse.filter((msg) => isResponseMessage(msg) || isToolMessage(msg) || isUserMessage(msg)).reverse();
     return messages[0];
-  }, [message.children]);
+  }, [message.children, loadedChildren]);
 
   const aggregateUsage = (messages: Message[]): UsageReportData | undefined => {
     const messagesWithUsage: (ResponseMessage | ToolMessage)[] = [];
@@ -68,7 +115,7 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
     };
   };
 
-  const aggregatedUsage = aggregateUsage(message.children);
+  const aggregatedUsage = aggregateUsage(loadedChildren || message.children);
 
   const getGroupDisplayName = (name?: string | LocalizedString) => {
     if (!name) {
@@ -90,7 +137,8 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
   );
 
   return (
-    <div className={clsx('bg-bg-secondary border border-border-dark-light rounded-md mb-2 relative')}>
+    <PerformanceProfiler componentName="GroupMessageBlock">
+      <div className={clsx('bg-bg-secondary border border-border-dark-light rounded-md mb-2 relative')}>
       {/* Color Bar */}
       <div
         className={clsx('absolute left-0 top-0 h-full w-1 rounded-tl-md rounded-bl-md z-10', !message.group.finished && 'animate-pulse')}
@@ -107,26 +155,36 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
         showCollapseButton={true}
         isOpen={isOpen}
         scrollToVisibleWhenExpanded={true}
-        onOpenChange={setIsOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          trackLazyLoading(open ? 'expand' : 'collapse', undefined, message.children.length);
+        }}
       >
         <div className="p-2 pl-3 pb-0.5 bg-bg-primary-light">
-          {message.children.map((child, index) => (
-            <MessageBlock
-              key={child.id || index}
-              baseDir={baseDir}
-              taskId={taskId}
-              message={child}
-              allFiles={allFiles}
-              renderMarkdown={renderMarkdown}
-              remove={remove ? () => remove(child) : undefined}
-              redo={redo}
-              edit={edit}
-            />
-          ))}
+          {isLoadingChildren ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="ml-2 text-sm text-text-muted">{t('common.loading')}</span>
+            </div>
+          ) : (
+            loadedChildren && loadedChildren.map((child, index) => (
+              <MessageBlock
+                key={child.id || index}
+                baseDir={baseDir}
+                taskId={taskId}
+                message={child}
+                allFiles={allFiles}
+                renderMarkdown={renderMarkdown}
+                remove={remove ? () => remove(child) : undefined}
+                redo={redo}
+                edit={edit}
+              />
+            ))
+          )}
         </div>
       </Accordion>
       <AnimatePresence>
-        {!message.group.finished && !isOpen && previewMessage && (
+        {!isOpen && previewMessage && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 32 }}
@@ -151,7 +209,8 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
       <div className="px-3 pb-3">
         <MessageBar className="mt-0" usageReport={aggregatedUsage} />
       </div>
-    </div>
+      </div>
+    </PerformanceProfiler>
   );
 };
 
