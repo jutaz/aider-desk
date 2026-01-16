@@ -183,6 +183,8 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
 
     const handleTaskDeleted = (taskData: TaskData) => {
       setTasks((prev) => prev.filter((task) => task.id !== taskData.id));
+      // Clean up task data from the store
+      useTaskStore.getState().deleteTask(taskData.id);
     };
 
     const handleInputHistoryUpdate = (data: InputHistoryData) => {

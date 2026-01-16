@@ -171,7 +171,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
       const hadState = newStateMap.has(taskId);
       const hadMessages = newMessagesMap.has(taskId);
-      const hadPendingMessages = taskPendingMessages.has(taskId);
 
       // Remove task state
       newStateMap.delete(taskId);
@@ -184,7 +183,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         console.log(`TaskStore: Cleaned up task ${taskId}`, {
           hadState,
           hadMessages,
-          hadPendingMessages,
           remainingTasks: newStateMap.size,
           remainingMessageMaps: newMessagesMap.size,
         });

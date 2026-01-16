@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GroupMessageBlock } from '../GroupMessageBlock';
-import { GroupMessage, Message, ResponseMessage, ToolMessage, UserMessage } from '@/types/message';
+import { GroupMessage, Message, ResponseMessage, ToolMessage } from '@/types/message';
 import { UsageReportData } from '@common/types';
 
 // Mock dependencies
@@ -11,12 +11,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/hooks/usePerformanceMonitor', () => ({
-  PerformanceProfiler: ({ children }: { children: React.ReactNode }) => children,
-  usePerformanceMonitor: () => ({
-    trackLazyLoading: vi.fn(),
-  }),
-}));
+
 
 vi.mock('../MessageBlock', () => ({
   MessageBlock: ({ message, compact }: { message: Message; compact?: boolean }) => (
@@ -39,14 +34,12 @@ vi.mock('@/components/common/Accordion', () => ({
     title,
     children,
     isOpen,
-    onOpenChange,
-    scrollToVisibleWhenExpanded
+    onOpenChange
   }: {
     title: React.ReactNode;
     children: React.ReactNode;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    scrollToVisibleWhenExpanded?: boolean;
   }) => (
     <div data-testid="accordion">
       <button
@@ -217,31 +210,7 @@ describe('GroupMessageBlock', () => {
       });
     });
 
-    it('tracks lazy loading performance', async () => {
-      const mockTrackLazyLoading = vi.fn();
-      vi.mocked(vi.importMock('@/hooks/usePerformanceMonitor')).usePerformanceMonitor.mockReturnValue({
-        trackLazyLoading: mockTrackLazyLoading,
-      });
 
-      const largeThread = createMockGroupMessage({
-        children: Array.from({ length: 15 }, (_, i) =>
-          createMockMessage({ id: `child-${i}`, type: 'user', content: `Message ${i}` })
-        ),
-      });
-
-      render(<GroupMessageBlock {...defaultProps} message={largeThread} />);
-
-      const toggle = screen.getByTestId('accordion-toggle');
-      fireEvent.click(toggle);
-
-      await act(async () => {
-        await vi.advanceTimersByTime(200);
-      });
-
-      expect(mockTrackLazyLoading).toHaveBeenCalledWith('load-start', undefined, 15);
-      expect(mockTrackLazyLoading).toHaveBeenCalledWith('load-end', expect.any(Number), 15);
-      expect(mockTrackLazyLoading).toHaveBeenCalledWith('expand', undefined, 15);
-    });
   });
 
   describe('Preview Message', () => {
@@ -447,11 +416,5 @@ describe('GroupMessageBlock', () => {
     });
   });
 
-  describe('Performance Monitoring', () => {
-    it('wraps component with PerformanceProfiler', () => {
-      const { container } = render(<GroupMessageBlock {...defaultProps} />);
-      // PerformanceProfiler is mocked to just render children, so we check the wrapper div
-      expect(container.firstChild).toBeInTheDocument();
-    });
-  });
+
 });

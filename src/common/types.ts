@@ -336,7 +336,7 @@ export interface ModelsData {
   mainModel: string;
   weakModel?: string | null;
   architectModel?: string | null;
-  reasoningEffort?: string;
+  reasoningEffort?: ReasoningEffort;
   thinkingTokens?: string;
   editFormat?: EditFormat;
   info?: RawModelInfo;
@@ -900,6 +900,12 @@ export interface MemoryEntry {
   taskId?: string;
   projectId?: string;
   timestamp: number;
+}
+
+export interface TodoItem {
+  id?: string;
+  name: string;
+  completed: boolean;
 }
 
 export interface BranchInfo {

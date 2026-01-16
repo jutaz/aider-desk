@@ -5,6 +5,7 @@ import { DefaultTaskState, TaskData } from '@common/types';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 
+
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
 
@@ -64,6 +65,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     const { t } = useTranslation();
     const { settings } = useSettings();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+
 
     // Group messages by promptContext.group.id
     const processedMessages = useMemo(() => groupMessagesByPromptContext(messages), [messages]);
@@ -193,7 +195,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
             onDeleteTask={onDeleteTask}
           />
         )}
-      </div>
+        </div>
     );
   },
 );

@@ -18,6 +18,7 @@ import { VoiceSettings } from '@/components/settings/VoiceSettings';
 import { HotkeysSettings } from '@/components/settings/HotkeysSettings';
 import { TaskSettings } from '@/components/settings/TaskSettings';
 
+
 type Props = {
   settings: SettingsData;
   updateSettings: (settings: SettingsData) => void;
@@ -168,6 +169,7 @@ export const Settings = ({
           },
         ]
       : []),
+
     {
       id: 'about',
       pageId: 'about',
@@ -254,6 +256,7 @@ export const Settings = ({
         return <HotkeysSettings settings={settings} setSettings={updateSettings} />;
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
+
       case 'about':
         return <AboutSettings settings={settings} setSettings={updateSettings} />;
       default:

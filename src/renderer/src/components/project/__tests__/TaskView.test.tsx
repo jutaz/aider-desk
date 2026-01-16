@@ -45,6 +45,12 @@ vi.mock('@/contexts/TaskContext', () => ({
 vi.mock('@/stores/taskStore', () => ({
   useTaskState: vi.fn(),
   useTaskMessages: vi.fn(),
+  useTaskStore: {
+    getState: vi.fn(() => ({
+      deleteTask: vi.fn(),
+      getMemoryUsage: vi.fn(() => ({ taskStates: 0, messages: 0, pendingMessages: 0, total: 0 })),
+    })),
+  },
 }));
 
 vi.mock('@/contexts/ModelProviderContext', () => ({

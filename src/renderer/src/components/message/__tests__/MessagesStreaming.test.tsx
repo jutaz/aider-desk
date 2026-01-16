@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 vi.mock('@/stores/taskStore');
 vi.mock('@/contexts/SettingsContext');
 vi.mock('react-i18next');
-vi.mock('@/hooks/usePerformanceMonitor');
+
 vi.mock('@/hooks/useScrollingPaused');
 vi.mock('@/hooks/useUserMessageNavigation');
 vi.mock('@/components/message/utils', () => ({
@@ -110,7 +110,7 @@ describe('Messages Streaming', () => {
     });
 
     vi.mocked(useSettings).mockReturnValue({
-      settings: { renderMarkdown: true, taskSettings: { showTaskStateActions: false } },
+      settings: { renderMarkdown: true, taskSettings: { showTaskStateActions: false, smartTaskState: false, autoGenerateTaskName: false, worktreeSymlinkFolders: [] } },
       updateSettings: vi.fn(),
     });
 
@@ -137,10 +137,7 @@ describe('Messages Streaming', () => {
       })),
     }));
 
-    vi.mocked(await import('@/hooks/usePerformanceMonitor')).then(() => ({
-      PerformanceProfiler: ({ children }: any) => children,
-      usePerformanceMonitor: vi.fn(),
-    }));
+
   });
 
   afterEach(() => {

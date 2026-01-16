@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { DefaultTaskState, TaskData } from '@common/types';
 import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 
+
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
 
@@ -66,6 +67,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+
     // Group messages by promptContext.group.id
     const processedMessages = groupMessagesByPromptContext(messages);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
@@ -126,10 +128,10 @@ export const Messages = forwardRef<MessagesRef, Props>(
 
     return (
       <div
-        ref={messagesContainerRef}
-        className="flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
-        {...eventHandlers}
-      >
+          ref={messagesContainerRef}
+          className="flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
+          {...eventHandlers}
+        >
         <StyledTooltip id="usage-info-tooltip" />
         <div className="absolute left-1/2 -translate-x-1/2 w-[50%] bottom-0 z-10 flex justify-center gap-1 pt-10 pb-2 group">
           {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
@@ -187,7 +189,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
             onDeleteTask={onDeleteTask}
           />
         )}
-      </div>
+        </div>
     );
   },
 );

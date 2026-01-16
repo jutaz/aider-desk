@@ -3,7 +3,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { LocalizedString, UsageReportData } from '@common/types';
-import { PerformanceProfiler, usePerformanceMonitor } from '@/hooks/usePerformanceMonitor';
+
 
 import { MessageBlock } from './MessageBlock';
 import { MessageBar } from './MessageBar';
@@ -28,7 +28,7 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
   const [isOpen, setIsOpen] = useState(false);
   const [loadedChildren, setLoadedChildren] = useState<Message[] | null>(null);
   const [isLoadingChildren, setIsLoadingChildren] = useState(false);
-  const { trackLazyLoading } = usePerformanceMonitor('GroupMessageBlock');
+
 
   // Lazy loading effect
   useEffect(() => {
@@ -46,16 +46,13 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
     if (isOpen && loadedChildren !== null && loadedChildren.length === 0 && message.children.length > 10 && message.group.finished && !isLoadingChildren) {
       // Load children for large finished thread when expanded
       setIsLoadingChildren(true);
-      trackLazyLoading('load-start', undefined, message.children.length);
+
       // Simulate async loading (in real app, this might be fetching from server or heavy computation)
       const loadChildren = async () => {
-        const startTime = Date.now();
         // Small delay to show loading state
         await new Promise(resolve => setTimeout(resolve, 100));
         setLoadedChildren(message.children);
         setIsLoadingChildren(false);
-        const duration = Date.now() - startTime;
-        trackLazyLoading('load-end', duration, message.children.length);
       };
       loadChildren();
     }
@@ -137,8 +134,7 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
   );
 
   return (
-    <PerformanceProfiler componentName="GroupMessageBlock">
-      <div className={clsx('bg-bg-secondary border border-border-dark-light rounded-md mb-2 relative')}>
+    <div className={clsx('bg-bg-secondary border border-border-dark-light rounded-md mb-2 relative')}>
       {/* Color Bar */}
       <div
         className={clsx('absolute left-0 top-0 h-full w-1 rounded-tl-md rounded-bl-md z-10', !message.group.finished && 'animate-pulse')}
@@ -157,7 +153,7 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
         scrollToVisibleWhenExpanded={true}
         onOpenChange={(open) => {
           setIsOpen(open);
-          trackLazyLoading(open ? 'expand' : 'collapse', undefined, message.children.length);
+
         }}
       >
         <div className="p-2 pl-3 pb-0.5 bg-bg-primary-light">
@@ -210,7 +206,6 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
         <MessageBar className="mt-0" usageReport={aggregatedUsage} />
       </div>
       </div>
-    </PerformanceProfiler>
   );
 };
 

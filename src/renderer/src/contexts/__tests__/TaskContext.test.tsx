@@ -1,10 +1,9 @@
- * @vitest-environment jsdom
- */
+/* @vitest-environment jsdom */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 
-import { Message, ToolMessage, ResponseMessage } from '@/types/message';
+import { Message, ToolMessage } from '@/types/message';
 import { TaskEventSubscriber } from '../TaskContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useTaskStore } from '@/stores/taskStore';

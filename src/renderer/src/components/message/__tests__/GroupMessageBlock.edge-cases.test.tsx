@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GroupMessageBlock } from '../GroupMessageBlock';
-import { GroupMessage, Message, ResponseMessage, ToolMessage, UserMessage } from '@/types/message';
+import { GroupMessage, Message, ResponseMessage, ToolMessage } from '@/types/message';
 import { UsageReportData } from '@common/types';
 
 // Mock dependencies
@@ -11,12 +11,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/hooks/usePerformanceMonitor', () => ({
-  PerformanceProfiler: ({ children }: { children: React.ReactNode }) => children,
-  usePerformanceMonitor: () => ({
-    trackLazyLoading: vi.fn(),
-  }),
-}));
+
 
 vi.mock('../MessageBlock', () => ({
   MessageBlock: ({ message, compact, remove, redo, edit }: any) => (
@@ -485,7 +480,7 @@ describe('GroupMessageBlock Edge Cases', () => {
       const nullParamsGroup = createMockGroupMessage({
         group: {
           ...createMockGroupMessage().group,
-          name: { key: 'messages.nullParams', params: null },
+          name: { key: 'messages.nullParams' },
         },
       });
 
