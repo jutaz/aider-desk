@@ -43,6 +43,10 @@
     "closeTasks": "Close Tasks",
     "toggleTasks": "Toggle Tasks"
   },
+  "ideSelector": {
+    "open": "Open",
+    "openInIde": "Open in IDE"
+  },
   "search": {
     "placeholder": "Search...",
     "previousResult": "Previous result (SHIFT + F3)",
@@ -399,6 +403,7 @@
       "memory": "Memory",
       "voice": "Voice",
       "hotkeys": "Hotkeys",
+
       "server": "Server",
       "about": "About"
     },
@@ -436,6 +441,7 @@
       "startRecording": "Start Recording",
       "stopRecording": "Stop Recording"
     },
+
     "gui": "Appearance",
     "voice": {
       "title": "Voice",
@@ -1333,6 +1339,7 @@
     "exportAsImage": "Export as image",
     "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
     "duplicateTask": "Duplicate Task",
+
     "search": "Search tasks",
     "searchPlaceholder": "Search tasks...",
     "archiveTask": "Archive Task",

@@ -587,6 +587,10 @@ const api: ApplicationAPI = {
 
   writeToClipboard: (text: string) => ipcRenderer.invoke('clipboard-write-text', text),
   openPath: (path: string) => ipcRenderer.invoke('open-path', path),
+  detectIDEs: () => ipcRenderer.invoke('detect-ides'),
+  launchIDE: (ideId, directory, isWorktree) => ipcRenderer.invoke('launch-ide', ideId, directory, isWorktree),
+  getAvailableIDEs: () => ipcRenderer.invoke('get-available-ides'),
+  isIDEAvailable: (ideId) => ipcRenderer.invoke('is-ide-available', ideId),
 
   addAgentProfilesUpdatedListener: (callback) => {
     const listener = (_, data) => callback(data);

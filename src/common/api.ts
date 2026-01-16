@@ -7,10 +7,12 @@ import {
   ContextFilesUpdatedData,
   CustomCommand,
   CustomCommandsUpdatedData,
+  DetectionResult,
   EditFormat,
   EnvironmentVariable,
   FileEdit,
   InputHistoryData,
+  IDE,
   LogData,
   McpServerConfig,
   McpTool,
@@ -220,4 +222,9 @@ export interface ApplicationAPI {
   // Clipboard operations
   writeToClipboard: (text: string) => Promise<void>;
   openPath: (path: string) => Promise<boolean>;
+
+  detectIDEs: () => Promise<DetectionResult>;
+  launchIDE: (ideId: string, directory: string, isWorktree: boolean) => Promise<void>;
+  getAvailableIDEs: () => Promise<IDE[]>;
+  isIDEAvailable: (ideId: string) => Promise<boolean>;
 }

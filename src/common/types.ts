@@ -93,6 +93,16 @@ export interface LocalizedString {
   params?: Record<string, unknown>;
 }
 
+export interface IDE {
+  id: string;
+  name: string;
+  displayName: string;
+  executablePath: string;
+  icon?: string;
+  isValid: boolean;
+  launchArgs?: string[];
+}
+
 export type Mode = 'code' | 'ask' | 'architect' | 'context' | 'agent';
 
 export interface AiderRunOptions {
@@ -239,6 +249,22 @@ export enum OS {
   MacOS = 'macos',
 }
 
+export interface IDE {
+  id: string;
+  name: string;
+  displayName: string;
+  executablePath: string;
+  icon?: string;
+  isValid: boolean;
+  launchArgs?: string[];
+}
+
+export interface DetectionResult {
+  ides: IDE[];
+  lastUpdated: Date;
+  platform: string;
+}
+
 export interface CloudflareTunnelStatus {
   isRunning: boolean;
   url?: string;
@@ -310,6 +336,7 @@ export const ProjectSettingsSchema = z.object({
   contextCompactingThreshold: z.number().optional(),
   weakModelLocked: z.boolean().optional(),
   autoApproveLocked: z.boolean().optional(),
+  preferredIde: z.string().optional(),
 });
 
 export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
@@ -552,6 +579,7 @@ export interface SettingsData {
   theme?: Theme;
   font?: Font;
   fontSize?: number;
+
   renderMarkdown: boolean;
   virtualizedRendering: boolean;
   aiderDeskAutoUpdate: boolean;

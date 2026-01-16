@@ -4,9 +4,11 @@ import fs from 'fs/promises';
 import {
   CloudflareTunnelStatus,
   CustomCommand,
+  DetectionResult,
   EditFormat,
   EnvironmentVariable,
   FileEdit,
+  IDE,
   McpServerConfig,
   McpTool,
   Mode,
@@ -46,6 +48,7 @@ import { getDefaultProjectSettings, getEffectiveEnvironmentVariable, getFilePath
 import { AIDER_DESK_TMP_DIR, LOGS_DIR } from '@/constants';
 import { EventManager } from '@/events';
 import { isElectron } from '@/app';
+import { IDEDetector, IDEManager } from '@/ide';
 
 export class EventsHandler {
   constructor(
@@ -62,6 +65,8 @@ export class EventsHandler {
     private eventManager: EventManager,
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
+    private readonly ideDetector: IDEDetector,
+    private readonly ideManager: IDEManager,
   ) {}
 
   loadSettings(): SettingsData {
@@ -917,5 +922,26 @@ export class EventsHandler {
 
   getMemoryEmbeddingProgress() {
     return this.memoryManager.getProgress();
+  }
+
+  async detectIDEs(): Promise<DetectionResult> {
+    const detectedIDEs = await this.ideDetector.detectIDEs();
+    return {
+      ides: Array.from(detectedIDEs.values()),
+      lastUpdated: new Date(),
+      platform: process.platform,
+    };
+  }
+
+  async launchIDE(ideId: string, directory: string, isWorktree: boolean): Promise<void> {
+    await this.ideManager.launchIDE(ideId, directory, isWorktree);
+  }
+
+  getAvailableIDEs(): IDE[] {
+    return this.ideManager.getAvailableIDEs();
+  }
+
+  isIDEAvailable(ideId: string): boolean {
+    return this.ideManager.isIDEAvailable(ideId);
   }
 }

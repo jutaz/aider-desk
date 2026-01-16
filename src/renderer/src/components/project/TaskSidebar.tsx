@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
 import { RiMenuUnfold4Line, RiFlag2Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
+
 import { IoLogoMarkdown } from 'react-icons/io';
 import { IoGitBranch } from 'react-icons/io5';
 import { CgSpinner } from 'react-icons/cg';
@@ -26,6 +27,8 @@ import { LoadingText } from '@/components/common/LoadingText';
 import { getTaskStateLabel, TaskStateChip } from '@/components/common/TaskStateChip';
 import { useTaskState } from '@/stores/taskStore';
 
+
+
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
 
@@ -46,6 +49,7 @@ type TaskMenuButtonProps = {
   onExportToMarkdown?: () => void;
   onExportToImage?: () => void;
   onDuplicateTask?: () => void;
+
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onTogglePin?: () => void;
@@ -60,6 +64,7 @@ const TaskMenuButton = ({
   onExportToMarkdown,
   onExportToImage,
   onDuplicateTask,
+
   onArchiveTask,
   onUnarchiveTask,
   onTogglePin,
@@ -125,6 +130,8 @@ const TaskMenuButton = ({
     onDuplicateTask?.();
     setIsMenuOpen(false);
   };
+
+
 
   const handleArchiveTaskClick = (e: MouseEvent) => {
     e.stopPropagation();
@@ -221,6 +228,7 @@ const TaskMenuButton = ({
                 <span className="whitespace-nowrap">{t('taskSidebar.duplicateTask')}</span>
               </li>
             )}
+
             {task.state !== DefaultTaskState.InProgress && (
               <li
                 ref={stateSubmenuItemRef}
@@ -416,6 +424,7 @@ const TaskSidebarComponent = ({
   onClose,
 }: Props) => {
   const { t } = useTranslation();
+
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState<string>('');
@@ -614,6 +623,8 @@ const TaskSidebarComponent = ({
     }
   };
 
+
+
   // Multiselect handlers
   const handleTaskCtrlClick = (e: MouseEvent, taskId: string) => {
     e.preventDefault();
@@ -792,6 +803,7 @@ const TaskSidebarComponent = ({
               onExportToMarkdown={onExportToMarkdown && task.createdAt ? () => onExportToMarkdown(task.id) : undefined}
               onExportToImage={onExportToImage && task.createdAt ? () => onExportToImage(task.id) : undefined}
               onDuplicateTask={onDuplicateTask && task.createdAt ? () => onDuplicateTask(task.id) : undefined}
+
               onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
               onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
               onTogglePin={() => handleTogglePin(task.id)}

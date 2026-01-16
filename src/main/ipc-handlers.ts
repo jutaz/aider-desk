@@ -465,4 +465,21 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   ipcMain.handle('clipboard-write-text', async (_, text: string) => {
     clipboard.writeText(text);
   });
+
+  // IDE handlers
+  ipcMain.handle('detect-ides', async () => {
+    return await eventsHandler.detectIDEs();
+  });
+
+  ipcMain.handle('launch-ide', async (_, ideId: string, directory: string, isWorktree: boolean) => {
+    return await eventsHandler.launchIDE(ideId, directory, isWorktree);
+  });
+
+  ipcMain.handle('get-available-ides', async () => {
+    return await eventsHandler.getAvailableIDEs();
+  });
+
+  ipcMain.handle('is-ide-available', async (_, ideId: string) => {
+    return await eventsHandler.isIDEAvailable(ideId);
+  });
 };

@@ -19,6 +19,8 @@ import {
   CloudflareTunnelStatus,
   BranchInfo,
   WorktreeIntegrationStatus,
+  IDE,
+  DetectionResult,
   AgentProfile,
   MemoryEntry,
   MemoryEmbeddingProgress,
@@ -227,6 +229,10 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     deleteMemory: vi.fn((): Promise<boolean> => Promise.resolve(true)),
     deleteProjectMemories: vi.fn((): Promise<number> => Promise.resolve(0)),
     writeToClipboard: vi.fn((): Promise<void> => Promise.resolve()),
+    detectIDEs: vi.fn((): Promise<DetectionResult> => Promise.resolve({} as DetectionResult)),
+    launchIDE: vi.fn((): Promise<void> => Promise.resolve()),
+    getAvailableIDEs: vi.fn((): Promise<IDE[]> => Promise.resolve([])),
+    isIDEAvailable: vi.fn((): Promise<boolean> => Promise.resolve(true)),
     openPath: vi.fn((): Promise<boolean> => Promise.resolve(true)),
   };
 

@@ -43,6 +43,10 @@
     "closeTasks": "关闭任务",
     "toggleTasks": "切换任务"
   },
+  "ideSelector": {
+    "open": "打开",
+    "openInIde": "在IDE中打开"
+  },
   "search": {
     "placeholder": "查找...",
     "previousResult": "上一个结果 (SHIFT + F3)",
@@ -399,6 +403,7 @@
       "memory": "记忆",
       "tasks": "任务",
       "voice": "语音",
+
       "about": "关于"
     },
     "hotkeys": {
@@ -435,6 +440,7 @@
       "startRecording": "开始录制",
       "stopRecording": "停止录制"
     },
+
     "gui": "GUI",
     "voice": {
       "title": "语音",
@@ -1340,6 +1346,7 @@
     "exportAsImage": "导出为图片",
     "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
     "duplicateTask": "复制任务",
+
     "search": "搜索任务",
     "searchPlaceholder": "搜索任务...",
     "archiveTask": "归档任务",

@@ -18,6 +18,7 @@ import { VoiceSettings } from '@/components/settings/VoiceSettings';
 import { HotkeysSettings } from '@/components/settings/HotkeysSettings';
 import { TaskSettings } from '@/components/settings/TaskSettings';
 
+
 type Props = {
   settings: SettingsData;
   updateSettings: (settings: SettingsData) => void;
@@ -147,6 +148,7 @@ export const Settings = ({
       label: t('settings.tabs.hotkeys'),
       icon: <FaKeyboard className="w-4 h-4" />,
     },
+
     ...(isServerManagementSupported
       ? [
           {
@@ -252,6 +254,7 @@ export const Settings = ({
         return <VoiceSettings providers={providers} setProviders={setProviders} initialProviderId={initialOptions?.providerId as string | undefined} />;
       case 'hotkeys':
         return <HotkeysSettings settings={settings} setSettings={updateSettings} />;
+
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':

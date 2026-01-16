@@ -35,6 +35,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
 import { AutoApprove } from '@/components/PromptField/AutoApprove';
+import { IDESelector } from '@/components/PromptField/IDESelector';
 import { useResponsive } from '@/hooks/useResponsive';
 
 const External = Annotation.define<boolean>();
@@ -1065,6 +1066,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             </div>
 
             <div className="flex-grow" />
+            <IDESelector baseDir={baseDir} />
             {toggleTerminal && (
               <Button
                 variant="text"

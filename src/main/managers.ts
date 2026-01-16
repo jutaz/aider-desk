@@ -20,6 +20,7 @@ import logger from '@/logger';
 import { EventsHandler } from '@/events-handler';
 import { HookManager } from '@/hooks/hook-manager';
 import { PromptsManager } from '@/prompts';
+import { IDEDetector, IDEManager } from '@/ide';
 
 export interface ManagersResult {
   eventsHandler: EventsHandler;
@@ -93,6 +94,10 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   // Initialize Cloudflare tunnel manager
   const cloudflareTunnelManager = new CloudflareTunnelManager();
 
+  // Initialize IDE detector and manager
+  const ideDetector = new IDEDetector();
+  const ideManager = new IDEManager(ideDetector);
+
   // Initialize events handler (no main window)
   const eventsHandler = new EventsHandler(
     mainWindow,
@@ -108,6 +113,8 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
     eventManager,
     agentProfileManager,
     memoryManager,
+    ideDetector,
+    ideManager,
   );
 
   // Create and initialize REST API controller with the server

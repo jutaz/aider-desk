@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   notificationsEnabled: false,
   theme: 'dark',
   font: 'Sono',
+
   renderMarkdown: true,
   virtualizedRendering: false,
   aiderDeskAutoUpdate: true,

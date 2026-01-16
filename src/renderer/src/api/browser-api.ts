@@ -7,10 +7,12 @@ import {
   ContextFilesUpdatedData,
   CustomCommand,
   CustomCommandsUpdatedData,
+  DetectionResult,
   EditFormat,
   EnvironmentVariable,
   FileEdit,
   InputHistoryData,
+  IDE,
   LogData,
   McpServerConfig,
   McpTool,
@@ -899,6 +901,22 @@ export class BrowserApi implements ApplicationAPI {
   async openPath(): Promise<boolean> {
     // Not available in browser context
     return false;
+  }
+
+  detectIDEs(): Promise<DetectionResult> {
+    return Promise.reject(new UnsupportedError('detectIDEs not supported in browser mode'));
+  }
+
+  launchIDE(_ideId: string, _directory: string, _isWorktree: boolean): Promise<void> {
+    return Promise.reject(new UnsupportedError('launchIDE not supported in browser mode'));
+  }
+
+  getAvailableIDEs(): Promise<IDE[]> {
+    return Promise.reject(new UnsupportedError('getAvailableIDEs not supported in browser mode'));
+  }
+
+  isIDEAvailable(_ideId: string): Promise<boolean> {
+    return Promise.reject(new UnsupportedError('isIDEAvailable not supported in browser mode'));
   }
 
   // Agent profile operations
