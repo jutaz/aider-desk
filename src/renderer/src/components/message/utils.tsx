@@ -462,26 +462,26 @@ export const areMessagesEqual = (prevMessage: Message, nextMessage: Message): bo
 };
 
 export const groupMessagesByPromptContext = (messages: Message[]): Message[] => {
-  const result: Message[] = [];
   const groupMap = new Map<string, Message[]>();
-  const nonGroupMessages: Message[] = [];
+  const groupOrder = new Map<string, number>(); // Track first message index for each group
 
-  // First pass: collect messages by group
-  messages.forEach((message) => {
+  // First pass: collect messages by group and track order
+  messages.forEach((message, index) => {
     const groupId = message.promptContext?.group?.id;
     if (groupId) {
       if (!groupMap.has(groupId)) {
+        groupOrder.set(groupId, index); // Record the index of the first message in this group
         groupMap.set(groupId, []);
       }
       groupMap.get(groupId)!.push(message);
-    } else {
-      nonGroupMessages.push(message);
     }
   });
 
-  // Second pass: create GroupMessages for each group
+  // Create items to add: groups and non-group messages with their positions
+  const itemsToAdd: Array<{ item: Message; position: number }> = [];
+
+  // Add groups
   groupMap.forEach((groupMessages, groupId) => {
-    // Use the group info from the first message or the latest unfinished one
     const groupInfo = groupMessages.find(m => m.promptContext?.group)?.promptContext!.group!;
     const groupMessage: GroupMessage = {
       id: groupId,
@@ -490,11 +490,20 @@ export const groupMessagesByPromptContext = (messages: Message[]): Message[] => 
       group: groupInfo,
       children: groupMessages,
     };
-    result.push(groupMessage);
+    const position = groupOrder.get(groupId) || 0;
+    itemsToAdd.push({ item: groupMessage, position });
   });
 
   // Add non-group messages
-  result.push(...nonGroupMessages);
+  messages.forEach((message, index) => {
+    if (!message.promptContext?.group?.id) {
+      itemsToAdd.push({ item: message, position: index });
+    }
+  });
 
-  return result;
+  // Sort items by position
+  itemsToAdd.sort((a, b) => a.position - b.position);
+
+  // Extract the messages
+  return itemsToAdd.map(({ item }) => item);
 };
