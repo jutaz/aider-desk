@@ -25,8 +25,16 @@ export interface AiderModelMapping {
  * - Environment variable detection
  * - Aider integration
  */
+
+export interface EmbeddingClient {
+  embed: (text: string) => Promise<number[]>;
+  embedBatch?: (texts: string[]) => Promise<number[][]>;
+  getDimensions: () => number;
+}
+
 export interface LoadModelsResponse {
   models: Model[];
+  embeddingModels?: Model[];
   success: boolean;
   error?: string;
 }
@@ -90,6 +98,11 @@ export interface LlmProviderStrategy {
    * Creates a voice session configuration if supported
    */
   createVoiceSession?: (profile: ProviderProfile, settings: SettingsData) => Promise<VoiceSession>;
+
+  /**
+   * Creates an embedding client for the given provider and model
+   */
+  createEmbedding?: (profile: ProviderProfile, model: string, settings: SettingsData, projectDir: string) => Promise<EmbeddingClient>;
 }
 
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;

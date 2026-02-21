@@ -7,7 +7,7 @@ import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { ProjectManager } from '@/project';
 import { EventManager } from '@/events';
-import { ModelManager } from '@/models';
+import { ModelManager, setModelManagerInstance } from '@/models';
 import { DataManager } from '@/data-manager';
 import { TerminalManager } from '@/terminal';
 import { VersionsManager } from '@/versions';
@@ -45,6 +45,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
 
   // Initialize model manager
   const modelManager = new ModelManager(store, eventManager);
+  setModelManagerInstance(modelManager);
 
   // Initialize data manager
   const dataManager = new DataManager();

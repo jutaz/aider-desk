@@ -1,13 +1,14 @@
-import { MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEmbeddingProvider, MemoryEntry, SettingsData } from '@common/types';
-import { useEffect, useMemo, useState } from 'react';
+import { MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEmbeddingProvider, MemoryEntry, ProviderProfile, SettingsData } from '@common/types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaTrash } from 'react-icons/fa';
 
 import { Checkbox } from '../common/Checkbox';
-import { Select } from '../common/Select';
+import { Select, type Option } from '../common/Select';
 import { Section } from '../common/Section';
 
 import { useApi } from '@/contexts/ApiContext';
+import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { Button } from '@/components/common/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { IconButton } from '@/components/common/IconButton';
@@ -15,7 +16,15 @@ import { CodeInline } from '@/components/common/CodeInline';
 import { Slider } from '@/components/common/Slider';
 import { InfoIcon } from '@/components/common/InfoIcon';
 
-const EMBEDDING_PROVIDERS = [{ value: 'sentence-transformers', label: 'Local' }];
+const OPENAI_EMBEDDING_MODELS = [
+  { value: 'text-embedding-3-small', label: 'text-embedding-3-small', dimensions: 1536, cost: '$0.02/1M' },
+  { value: 'text-embedding-3-large', label: 'text-embedding-3-large', dimensions: 3072, cost: '$0.13/1M' },
+];
+
+const LITELLM_EMBEDDING_MODELS = [
+  { value: 'text-embedding-3-small', label: 'text-embedding-3-small', dimensions: 1536, cost: 'Varies' },
+  { value: 'text-embedding-3-large', label: 'text-embedding-3-large', dimensions: 3072, cost: 'Varies' },
+];
 
 const LOCAL_MODELS = [
   {
@@ -48,13 +57,145 @@ type Props = {
 export const MemorySettings = ({ settings, setSettings }: Props) => {
   const { t } = useTranslation();
   const api = useApi();
+  const { providers } = useModelProviders();
 
   const [memories, setMemories] = useState<MemoryEntry[] | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('__all__');
   const [memoryToDelete, setMemoryToDelete] = useState<MemoryEntry | null>(null);
   const [isDeleteProjectDialogOpen, setIsDeleteProjectDialogOpen] = useState(false);
+  const [showReembeddingWarning, setShowReembeddingWarning] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Reset warning when provider changes
+  useEffect(() => {
+    if (hasInitialized) {
+      setShowReembeddingWarning(false);
+    } else {
+      // Mark as initialized after first render
+      setHasInitialized(true);
+    }
+  }, [settings.memory.provider, hasInitialized]);
 
   const [embeddingProgress, setEmbeddingProgress] = useState<MemoryEmbeddingProgress | null>(null);
+
+  // Provider options - defined after hooks to use t()
+  const providerOptions = useMemo(
+    () => [
+      { value: MemoryEmbeddingProvider.SentenceTransformers, label: t('memory.providerLocal') },
+      { value: MemoryEmbeddingProvider.OpenAI, label: t('memory.providerOpenAI') },
+      { value: MemoryEmbeddingProvider.LiteLLM, label: t('memory.providerLiteLLM') },
+    ],
+    [t],
+  );
+
+  // Filter to relevant providers
+  const openaiProviders = useMemo(() => providers.filter((p) => p.provider.name === 'openai'), [providers]);
+  const litellmProviders = useMemo(() => providers.filter((p) => p.provider.name === 'litellm'), [providers]);
+
+  // Helper functions
+  const getFirstProviderId = (provider: MemoryEmbeddingProvider): string | undefined => {
+    switch (provider) {
+      case MemoryEmbeddingProvider.OpenAI:
+        return openaiProviders[0]?.id;
+      case MemoryEmbeddingProvider.LiteLLM:
+        return litellmProviders[0]?.id;
+      default:
+        return undefined;
+    }
+  };
+
+  const getDefaultModelForProvider = (provider: MemoryEmbeddingProvider): string => {
+    switch (provider) {
+      case MemoryEmbeddingProvider.OpenAI:
+        return OPENAI_EMBEDDING_MODELS[0].value;
+      case MemoryEmbeddingProvider.LiteLLM:
+        return LITELLM_EMBEDDING_MODELS[0].value;
+      default:
+        return LOCAL_MODELS[0].value;
+    }
+  };
+
+  const getSelectedProviderProfiles = (): ProviderProfile[] => {
+    const providerName = settings.memory.provider;
+    switch (providerName) {
+      case MemoryEmbeddingProvider.OpenAI:
+        return openaiProviders;
+      case MemoryEmbeddingProvider.LiteLLM:
+        return litellmProviders;
+      default:
+        return [];
+    }
+  };
+
+  const getProviderOptions = useCallback(
+    (providerName: MemoryEmbeddingProvider): Option[] => {
+      switch (providerName) {
+        case MemoryEmbeddingProvider.OpenAI:
+          return openaiProviders.map((p) => ({ value: p.id, label: p.name || p.provider.name }));
+        case MemoryEmbeddingProvider.LiteLLM:
+          return litellmProviders.map((p) => ({ value: p.id, label: p.name || p.provider.name }));
+        default:
+          return [];
+      }
+    },
+    [openaiProviders, litellmProviders],
+  );
+
+  const getModelOptions = (): Option[] => {
+    switch (settings.memory.provider) {
+      case MemoryEmbeddingProvider.OpenAI:
+        return OPENAI_EMBEDDING_MODELS.map((m) => ({ value: m.value, label: m.label }));
+      case MemoryEmbeddingProvider.LiteLLM:
+        return LITELLM_EMBEDDING_MODELS.map((m) => ({ value: m.value, label: m.label }));
+      default:
+        return LOCAL_MODELS.map((m) => ({ value: m.value, label: m.label }));
+    }
+  };
+
+  const getModelDimensions = (): number => {
+    const models = settings.memory.provider === MemoryEmbeddingProvider.OpenAI ? OPENAI_EMBEDDING_MODELS : LITELLM_EMBEDDING_MODELS;
+    return models.find((m) => m.value === settings.memory.model)?.dimensions ?? 0;
+  };
+
+  const getModelCost = (): string => {
+    const models = settings.memory.provider === MemoryEmbeddingProvider.OpenAI ? OPENAI_EMBEDDING_MODELS : LITELLM_EMBEDDING_MODELS;
+    return models.find((m) => m.value === settings.memory.model)?.cost ?? '';
+  };
+
+  const handleProviderChange = (provider: string) => {
+    const newProvider = provider as MemoryEmbeddingProvider;
+
+    // Reset providerId when switching providers
+    const newProviderId = newProvider === MemoryEmbeddingProvider.SentenceTransformers ? undefined : getFirstProviderId(newProvider);
+
+    // Set default model for the provider
+    const defaultModel = getDefaultModelForProvider(newProvider);
+
+    setSettings({
+      ...settings,
+      memory: {
+        ...settings.memory,
+        provider: newProvider,
+        providerId: newProviderId,
+        model: defaultModel,
+      },
+    });
+
+    // Only show warning after initial load
+    if (hasInitialized) {
+      setShowReembeddingWarning(true);
+    }
+  };
+
+  const handleProviderIdChange = (providerId: string) => {
+    setSettings({
+      ...settings,
+      memory: {
+        ...settings.memory,
+        providerId,
+      },
+    });
+  };
 
   const loadMemories = async () => {
     const all = await api.listAllMemories();
@@ -167,16 +308,6 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
     });
   };
 
-  const handleProviderChange = (provider: string) => {
-    setSettings({
-      ...settings,
-      memory: {
-        ...settings.memory,
-        provider: provider as MemoryEmbeddingProvider,
-      },
-    });
-  };
-
   const handleMaxDistanceChange = (value: number) => {
     setSettings({
       ...settings,
@@ -202,27 +333,43 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
                   label={t('settings.memory.provider.label')}
                   value={settings.memory.provider}
                   onChange={handleProviderChange}
-                  options={EMBEDDING_PROVIDERS.map((provider) => ({
-                    value: provider.value,
-                    label: provider.label,
-                  }))}
+                  options={providerOptions}
                   className="w-full"
                 />
                 <p className="text-xs text-text-secondary mt-1">{t('settings.memory.provider.description')}</p>
               </div>
+
+              {settings.memory.provider !== MemoryEmbeddingProvider.SentenceTransformers && (
+                <div>
+                  <Select
+                    label={t('memory.selectProviderProfile')}
+                    value={settings.memory.providerId || ''}
+                    onChange={handleProviderIdChange}
+                    options={getProviderOptions(settings.memory.provider)}
+                    className="w-full"
+                  />
+                  {getSelectedProviderProfiles().length === 0 && (
+                    <p className="text-sm text-yellow-600">{t('memory.noProviderConfigured', { provider: settings.memory.provider })}</p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <Select
                   label={t('settings.memory.model.label')}
                   value={settings.memory.model}
                   onChange={handleModelChange}
-                  options={LOCAL_MODELS.map((model) => ({
-                    value: model.value,
-                    label: model.label,
-                  }))}
+                  options={getModelOptions()}
                   className="w-full"
                 />
-                <p className="text-xs text-text-secondary mt-1">{LOCAL_MODELS.find((m) => m.value === settings.memory.model)?.description}</p>
+                {settings.memory.provider !== MemoryEmbeddingProvider.SentenceTransformers && (
+                  <p className="text-xs text-text-secondary mt-1">
+                    {t('memory.dimensions')}: {getModelDimensions()} | {t('memory.costPerMillion')}: {getModelCost()}
+                  </p>
+                )}
+                {settings.memory.provider === MemoryEmbeddingProvider.SentenceTransformers && (
+                  <p className="text-xs text-text-secondary mt-1">{LOCAL_MODELS.find((m) => m.value === settings.memory.model)?.description}</p>
+                )}
               </div>
 
               <div>
@@ -241,6 +388,10 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
                 />
               </div>
             </div>
+          )}
+
+          {showReembeddingWarning && settings.memory.provider !== MemoryEmbeddingProvider.SentenceTransformers && (
+            <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">{t('memory.reembeddingWarning')}</div>
           )}
           {embeddingProgress && embeddingProgress.phase !== MemoryEmbeddingProgressPhase.Idle && (
             <div className="text-2xs text-text-muted">

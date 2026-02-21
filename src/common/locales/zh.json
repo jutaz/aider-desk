@@ -693,6 +693,16 @@
         "label": "嵌入提供商",
         "description": "选择用于记忆功能的嵌入提供商"
       },
+      "providerLocal": "本地 (SentenceTransformers)",
+      "providerOpenAI": "OpenAI",
+      "providerLiteLLM": "LiteLLM",
+      "selectProviderProfile": "选择提供商配置",
+      "embeddingModel": "嵌入模型",
+      "dimensions": "维度",
+      "costPerMillion": "每百万 tokens 费用",
+      "reembeddingWarning": "更改嵌入提供商需要重新嵌入所有记忆。这可能需要一些时间。",
+      "noProviderConfigured": "未配置 {{provider}} 提供商。请先在模型库中添加。",
+      "fallbackActive": "由于远程提供商不可用，正在使用本地后备方案",
       "maxDistance": {
         "label": "相关性阈值",
         "description": "值越高会检索到更多（但相关性更低）的记忆。值越低会检索到更少（但相关性更高）的记忆。"

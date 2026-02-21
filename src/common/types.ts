@@ -510,6 +510,8 @@ export interface HotkeyConfig {
 
 export enum MemoryEmbeddingProvider {
   SentenceTransformers = 'sentence-transformers',
+  OpenAI = 'openai',
+  LiteLLM = 'litellm',
 }
 
 export interface TaskSettings {
@@ -522,6 +524,7 @@ export interface TaskSettings {
 export interface MemoryConfig {
   enabled: boolean;
   provider: MemoryEmbeddingProvider;
+  providerId?: string;
   model: string;
   maxDistance: number;
 }
@@ -858,6 +861,8 @@ export interface UsageDataRow {
   cost: number;
 }
 
+export type ModelCategory = 'chat' | 'embedding';
+
 export interface Model {
   id: string;
   providerId: string;
@@ -874,6 +879,8 @@ export interface Model {
   isHidden?: boolean;
   hasModelOverrides?: boolean;
   providerOverrides?: Record<string, unknown>;
+  category?: ModelCategory;
+  embeddingDimensions?: number;
 }
 
 export interface ProviderModelsData {

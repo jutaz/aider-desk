@@ -1,11 +1,11 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { isLitellmProvider, LitellmProvider } from '@common/agent';
-import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { Model, ModelCategory, ProviderProfile, SettingsData } from '@common/types';
 
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import logger from '@/logger';
-import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
+import { AiderModelMapping, EmbeddingClient, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { getDefaultUsageReport } from '@/models/providers/default';
 
@@ -35,6 +35,46 @@ interface LiteLLMModelInfo {
     output_cost_per_token?: number;
   };
 }
+
+const detectLitellmModelCategory = (modelName: string): ModelCategory | undefined => {
+  const lowerName = modelName.toLowerCase();
+  if (lowerName.includes('embedding') || lowerName.includes('embed')) {
+    return 'embedding';
+  }
+  if (lowerName.startsWith('dall-e') || lowerName.startsWith('gpt-image')) {
+    return undefined;
+  } // skip image
+  if (lowerName.includes('-audio') || lowerName.startsWith('whisper')) {
+    return undefined;
+  } // skip audio
+  if (lowerName.startsWith('tts-')) {
+    return undefined;
+  } // skip tts
+  return 'chat';
+};
+
+const getLitellmEmbeddingDimensions = (modelId: string): number => {
+  const lowerId = modelId.toLowerCase();
+  if (lowerId.includes('large')) {
+    return 3072;
+  }
+  if (lowerId.includes('small')) {
+    return 1536;
+  }
+  if (lowerId.includes('ada')) {
+    return 1536;
+  }
+  if (lowerId.includes('babbage')) {
+    return 1536;
+  }
+  if (lowerId.includes('curie')) {
+    return 1536;
+  }
+  if (lowerId.includes('davinci')) {
+    return 1536;
+  }
+  return 1536; // default
+};
 
 export const loadLitellmModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isLitellmProvider(profile.provider)) {
@@ -100,7 +140,11 @@ export const loadLitellmModels = async (profile: ProviderProfile, settings: Sett
       }
     });
 
-    const models: Model[] = Object.entries(modelsByName).map(([name, infos]) => {
+    // Separate chat and embedding models
+    const chatModels: Model[] = [];
+    const embeddingModels: Model[] = [];
+
+    Object.entries(modelsByName).forEach(([name, infos]) => {
       // Helper to find value in multiple places for a single info object
       const getValue = (
         info: LiteLLMModelInfo,
@@ -108,6 +152,9 @@ export const loadLitellmModels = async (profile: ProviderProfile, settings: Sett
       ) => {
         return info[key] ?? info.model_info?.[key] ?? info.litellm_params?.[key];
       };
+
+      // Detect model category
+      const category = detectLitellmModelCategory(name);
 
       // Aggregate values across all backends for this model name
       // For limits (context window, max output), use MIN to be safe
@@ -123,18 +170,31 @@ export const loadLitellmModels = async (profile: ProviderProfile, settings: Sett
       const inputCostPerToken = inputCosts.length > 0 ? Math.max(...inputCosts) : undefined;
       const outputCostPerToken = outputCosts.length > 0 ? Math.max(...outputCosts) : undefined;
 
-      return {
+      const baseModel: Model = {
         id: name,
         providerId: profile.id,
         maxInputTokens,
         maxOutputTokensLimit,
         inputCostPerToken,
         outputCostPerToken,
-      } satisfies Model;
+      };
+
+      if (category === 'embedding') {
+        embeddingModels.push({
+          ...baseModel,
+          category: 'embedding' as ModelCategory,
+          embeddingDimensions: getLitellmEmbeddingDimensions(name),
+        });
+      } else if (category === 'chat') {
+        chatModels.push({
+          ...baseModel,
+          category: 'chat' as ModelCategory,
+        });
+      }
     });
 
-    logger.info(`Loaded ${models.length} LiteLLM models from /model/info for profile ${profile.id}`);
-    return { models, success: true };
+    logger.info(`Loaded ${chatModels.length} LiteLLM chat models and ${embeddingModels.length} embedding models from /model/info for profile ${profile.id}`);
+    return { models: chatModels, embeddingModels, success: true };
   } catch (error) {
     const errorMsg = typeof error === 'string' ? error : error instanceof Error ? error.message : 'Unknown error loading LiteLLM models';
     logger.error('Error loading LiteLLM models:', error);
@@ -203,6 +263,94 @@ export const createLitellmLlm = (profile: ProviderProfile, model: Model, setting
   return compatibleProvider(model.id);
 };
 
+// === Embedding Client Implementation ===
+export const createLitellmEmbedding = async (profile: ProviderProfile, model: string, settings: SettingsData, projectDir: string): Promise<EmbeddingClient> => {
+  const provider = profile.provider as LitellmProvider;
+  let apiKey = provider.apiKey;
+  let baseUrl = provider.baseUrl;
+
+  if (!apiKey) {
+    const effectiveVar = getEffectiveEnvironmentVariable('LITELLM_API_KEY', settings, projectDir);
+    if (effectiveVar) {
+      apiKey = effectiveVar.value;
+    }
+  }
+
+  // Use dummy key if not provided, similar to LLM creation
+  if (!apiKey) {
+    apiKey = 'sk-dummy';
+  }
+
+  if (!baseUrl) {
+    const effectiveVar = getEffectiveEnvironmentVariable('LITELLM_API_BASE', settings, projectDir);
+    if (effectiveVar) {
+      baseUrl = effectiveVar.value;
+    }
+  }
+
+  if (!baseUrl) {
+    throw new Error('Base URL is required for LiteLLM embeddings');
+  }
+
+  // Ensure no trailing slash
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+  const dimensions = getLitellmEmbeddingDimensions(model);
+
+  return {
+    embed: async (text: string): Promise<number[]> => {
+      const response = await fetch(`${normalizedBaseUrl}/v1/embeddings`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          input: text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`LiteLLM embedding failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      if (!data.data?.length) {
+        throw new Error('No embeddings returned from LiteLLM');
+      }
+      return data.data[0].embedding;
+    },
+
+    embedBatch: async (texts: string[]): Promise<number[][]> => {
+      const response = await fetch(`${normalizedBaseUrl}/v1/embeddings`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          input: texts,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`LiteLLM embedding failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      if (!data.data?.length) {
+        throw new Error('No embeddings returned from LiteLLM');
+      }
+      return data.data.map((d: { embedding: number[] }) => d.embedding);
+    },
+
+    getDimensions: () => dimensions,
+  };
+};
+
 // === Complete Strategy Implementation ===
 export const litellmProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -213,4 +361,7 @@ export const litellmProviderStrategy: LlmProviderStrategy = {
   loadModels: loadLitellmModels,
   hasEnvVars: hasLitellmEnvVars,
   getAiderMapping: getLitellmAiderMapping,
+
+  // Embedding support
+  createEmbedding: createLitellmEmbedding,
 };

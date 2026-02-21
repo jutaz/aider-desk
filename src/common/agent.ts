@@ -112,6 +112,7 @@ export interface OpenAiProvider extends LlmProviderBase {
   reasoningEffort?: ReasoningEffort;
   useWebSearch: boolean;
   voice?: Partial<OpenAiVoiceControlSettings>;
+  embeddingModel?: string;
 }
 export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider => provider.name === 'openai';
 
@@ -207,6 +208,7 @@ export interface LitellmProvider extends LlmProviderBase {
   name: 'litellm';
   apiKey: string;
   baseUrl: string;
+  embeddingModel?: string;
 }
 export const isLitellmProvider = (provider: LlmProviderBase): provider is LitellmProvider => provider.name === 'litellm';
 

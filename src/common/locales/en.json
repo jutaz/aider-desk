@@ -736,6 +736,16 @@
         "label": "Embedding Provider",
         "description": "Choose the embedding provider to use for memory functionality"
       },
+      "providerLocal": "Local (SentenceTransformers)",
+      "providerOpenAI": "OpenAI",
+      "providerLiteLLM": "LiteLLM",
+      "selectProviderProfile": "Select Provider Profile",
+      "embeddingModel": "Embedding Model",
+      "dimensions": "Dimensions",
+      "costPerMillion": "Cost per 1M tokens",
+      "reembeddingWarning": "Changing the embedding provider requires re-embedding all memories. This may take a moment.",
+      "noProviderConfigured": "No {{provider}} provider configured. Please add one in Model Library first.",
+      "fallbackActive": "Using local fallback due to remote provider unavailability",
       "maxDistance": {
         "label": "Relevance threshold",
         "description": "Higher values retrieve more (and less relevant) memories. Lower values retrieve fewer (and more relevant) memories."

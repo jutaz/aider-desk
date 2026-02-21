@@ -1,10 +1,20 @@
 import * as fs from 'fs';
 
-import { MemoryConfig, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEntry, MemoryEntryType, SettingsData } from '@common/types';
+import {
+  MemoryConfig,
+  MemoryEmbeddingProgress,
+  MemoryEmbeddingProgressPhase,
+  MemoryEmbeddingProvider,
+  MemoryEntry,
+  MemoryEntryType,
+  SettingsData,
+} from '@common/types';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { FeatureExtractionPipeline } from '@huggingface/transformers';
+import type { EmbeddingClient } from '@/models/types';
 
+import { getModelManager } from '@/models/model-manager';
 import { AIDER_DESK_CACHE_DIR, AIDER_DESK_MEMORY_FILE } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
@@ -21,6 +31,10 @@ export class MemoryManager {
   private embeddingPipelinePromise: Promise<FeatureExtractionPipeline | null> | null = null;
   private isInitialized = false;
   private readonly tableName = 'memories';
+
+  private embeddingClient: EmbeddingClient | null = null;
+  private currentEmbeddingProvider: MemoryEmbeddingProvider | null = null;
+  private currentEmbeddingModel: string | null = null;
 
   private embeddingProgress: MemoryEmbeddingProgress = {
     phase: MemoryEmbeddingProgressPhase.Idle,
@@ -152,6 +166,51 @@ export class MemoryManager {
       await this.embeddingPipelinePromise;
     }
     return this.isInitialized;
+  }
+
+  private async getEmbeddingClient(): Promise<EmbeddingClient | null> {
+    const settings = this.store.getSettings();
+    const memoryConfig = settings.memory;
+
+    if (memoryConfig.provider === MemoryEmbeddingProvider.SentenceTransformers) {
+      return null;
+    }
+
+    if (this.embeddingClient && this.currentEmbeddingProvider === memoryConfig.provider && this.currentEmbeddingModel === memoryConfig.model) {
+      return this.embeddingClient;
+    }
+
+    const providerId = memoryConfig.providerId;
+    if (!providerId) {
+      logger.warn('Remote embedding provider selected but no providerId configured');
+      return null;
+    }
+
+    const modelManager = getModelManager();
+    const profiles = modelManager.getProviderProfiles();
+    const profile = profiles.find((p) => p.id === providerId);
+
+    if (!profile) {
+      logger.warn(`Provider profile not found: ${providerId}`);
+      return null;
+    }
+
+    const strategy = modelManager.getProviderStrategy(memoryConfig.provider as 'openai' | 'litellm');
+    if (!strategy || !strategy.createEmbedding) {
+      logger.warn(`Provider strategy does not support embeddings: ${memoryConfig.provider}`);
+      return null;
+    }
+
+    try {
+      this.embeddingClient = await strategy.createEmbedding(profile, memoryConfig.model, settings, '');
+      this.currentEmbeddingProvider = memoryConfig.provider;
+      this.currentEmbeddingModel = memoryConfig.model;
+
+      return this.embeddingClient;
+    } catch (error) {
+      logger.error('Failed to create embedding client:', error);
+      return null;
+    }
   }
 
   async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData): Promise<void> {
@@ -337,7 +396,7 @@ export class MemoryManager {
   /**
    * Generates a vector embedding for the given text using the local model.
    */
-  private async getEmbedding(text: string): Promise<number[]> {
+  private async getLocalEmbedding(text: string): Promise<number[]> {
     await this.waitForInit();
 
     if (!this.isInitialized) {
@@ -358,6 +417,28 @@ export class MemoryManager {
 
     // Convert Float32Array to standard number array for LanceDB
     return Array.from(result.data);
+  }
+
+  /**
+   * Generates a vector embedding for the given text.
+   * Tries remote embedding first, then falls back to local.
+   */
+  private async getEmbedding(text: string): Promise<number[]> {
+    const settings = this.store.getSettings();
+    const memoryConfig = settings.memory;
+
+    if (memoryConfig.provider !== MemoryEmbeddingProvider.SentenceTransformers) {
+      try {
+        const client = await this.getEmbeddingClient();
+        if (client) {
+          return await client.embed(text);
+        }
+      } catch (error) {
+        logger.warn('Remote embedding failed, falling back to local:', error);
+      }
+    }
+
+    return this.getLocalEmbedding(text);
   }
 
   /**

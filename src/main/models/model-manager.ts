@@ -760,4 +760,35 @@ export class ModelManager {
 
     return await strategy.createVoiceSession(provider, this.store.getSettings());
   }
+
+  /**
+   * Returns all configured provider profiles.
+   */
+  getProviderProfiles(): ProviderProfile[] {
+    return this.store.getProviders();
+  }
+
+  /**
+   * Returns the provider strategy for the given provider name.
+   */
+  getProviderStrategy(provider: string): LlmProviderStrategy | undefined {
+    return this.providerRegistry[provider as keyof typeof this.providerRegistry];
+  }
 }
+
+/**
+ * Singleton accessor for the ModelManager.
+ * Returns the singleton instance from managers.ts.
+ */
+let modelManagerInstance: ModelManager | null = null;
+
+export const setModelManagerInstance = (instance: ModelManager): void => {
+  modelManagerInstance = instance;
+};
+
+export const getModelManager = (): ModelManager => {
+  if (!modelManagerInstance) {
+    throw new Error('ModelManager not initialized. Call setModelManagerInstance first.');
+  }
+  return modelManagerInstance;
+};

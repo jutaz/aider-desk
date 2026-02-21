@@ -1,15 +1,55 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { DEFAULT_VOICE_SYSTEM_INSTRUCTIONS, isOpenAiProvider, LlmProvider, OpenAiProvider, OpenAiVoiceModel } from '@common/agent';
-import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData, VoiceSession } from '@common/types';
+import { Model, ModelCategory, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import logger from '@/logger';
-import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
+import { AiderModelMapping, EmbeddingClient, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { calculateCost, getDefaultModelInfo } from '@/models/providers/default';
+
+const detectModelCategory = (id: string): ModelCategory | undefined => {
+  const lowerId = id.toLowerCase();
+  if (lowerId.includes('embedding')) {
+    return 'embedding';
+  }
+  if (lowerId.startsWith('dall-e') || lowerId.startsWith('gpt-image')) {
+    return undefined;
+  }
+  if (lowerId.includes('-audio') || lowerId.startsWith('whisper') || lowerId.includes('realtime')) {
+    return undefined;
+  }
+  if (lowerId.startsWith('tts-')) {
+    return undefined;
+  }
+  return 'chat';
+};
+
+const getEmbeddingDimensions = (modelId: string): number => {
+  const lowerId = modelId.toLowerCase();
+  if (lowerId.includes('large')) {
+    return 3072;
+  }
+  if (lowerId.includes('small')) {
+    return 1536;
+  }
+  if (lowerId.includes('ada')) {
+    return 1536;
+  }
+  if (lowerId.includes('babbage')) {
+    return 1536;
+  }
+  if (lowerId.includes('curie')) {
+    return 1536;
+  }
+  if (lowerId.includes('davinci')) {
+    return 1536;
+  }
+  return 1536;
+};
 
 export const loadOpenAiModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isOpenAiProvider(profile.provider)) {
@@ -36,40 +76,48 @@ export const loadOpenAiModels = async (profile: ProviderProfile, settings: Setti
     }
 
     const data = await response.json();
-    const filteredModels =
-      data.data?.filter((model: { id: string }) => {
-        const id = model.id;
-        if (id.startsWith('dall-e') || id.startsWith('gpt-image') || id.startsWith('chatgpt') || id.startsWith('codex')) {
-          return false;
-        }
-        if (id.includes('embedding')) {
-          return false;
-        }
-        if (id.includes('-audio') || id.includes('-realtime')) {
-          return false;
-        }
-        if (id.startsWith('davinci') || id.startsWith('babbage')) {
-          return false;
-        }
-        if (id.startsWith('tts-') || id.startsWith('whisper-')) {
-          return false;
-        }
-        if (id.includes('transcribe') || id.includes('tts') || id.includes('moderation') || id.includes('search')) {
-          return false;
-        }
-        return true;
-      }) || [];
-    const models =
-      filteredModels.map((model: { id: string }) => {
-        return {
+
+    const chatModels: Model[] = [];
+    const embeddingModels: Model[] = [];
+
+    data.data?.forEach((model: { id: string }) => {
+      const category = detectModelCategory(model.id);
+      if (category === 'embedding') {
+        embeddingModels.push({
           id: model.id,
           providerId: profile.id,
-          temperature: undefined,
-        } satisfies Model;
-      }) || [];
+          category: 'embedding' as ModelCategory,
+          embeddingDimensions: getEmbeddingDimensions(model.id),
+        });
+      } else if (category === 'chat') {
+        const id = model.id;
+        if (
+          !id.startsWith('dall-e') &&
+          !id.startsWith('gpt-image') &&
+          !id.startsWith('chatgpt') &&
+          !id.startsWith('codex') &&
+          !id.includes('-audio') &&
+          !id.includes('-realtime') &&
+          !id.startsWith('davinci') &&
+          !id.startsWith('babbage') &&
+          !id.startsWith('tts-') &&
+          !id.startsWith('whisper-') &&
+          !id.includes('transcribe') &&
+          !id.includes('tts') &&
+          !id.includes('moderation') &&
+          !id.includes('search')
+        ) {
+          chatModels.push({
+            id: model.id,
+            providerId: profile.id,
+            category: 'chat' as ModelCategory,
+          });
+        }
+      }
+    });
 
-    logger.info(`Loaded ${models.length} OpenAI models for profile ${profile.id}`);
-    return { models, success: true };
+    logger.info(`Loaded ${chatModels.length} OpenAI chat models and ${embeddingModels.length} embedding models for profile ${profile.id}`);
+    return { models: chatModels, embeddingModels, success: true };
   } catch (error) {
     const errorMsg = typeof error === 'string' ? error : error instanceof Error ? error.message : 'Unknown error loading OpenAI models';
     logger.error('Error loading OpenAI models:', error);
@@ -300,6 +348,72 @@ const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: Sett
   }
 };
 
+export const createOpenAiEmbedding = async (profile: ProviderProfile, model: string, settings: SettingsData, projectDir: string): Promise<EmbeddingClient> => {
+  const provider = profile.provider as OpenAiProvider;
+  let apiKey = provider.apiKey;
+
+  if (!apiKey) {
+    const effectiveVar = getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings, projectDir);
+    if (effectiveVar) {
+      apiKey = effectiveVar.value;
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('OpenAI API key is required for embeddings');
+  }
+
+  const dimensions = getEmbeddingDimensions(model);
+
+  return {
+    embed: async (text: string): Promise<number[]> => {
+      const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          input: text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`OpenAI embedding failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      return data.data[0].embedding;
+    },
+
+    embedBatch: async (texts: string[]): Promise<number[][]> => {
+      const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          input: texts,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`OpenAI embedding failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      return data.data.map((d: { embedding: number[] }) => d.embedding);
+    },
+
+    getDimensions: () => dimensions,
+  };
+};
+
 // === Complete Strategy Implementation ===
 export const openaiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -318,4 +432,7 @@ export const openaiProviderStrategy: LlmProviderStrategy = {
 
   // Voice support
   createVoiceSession: createOpenAIVoiceSession,
+
+  // Embedding support
+  createEmbedding: createOpenAiEmbedding,
 };

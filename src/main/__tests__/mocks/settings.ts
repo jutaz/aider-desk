@@ -10,6 +10,7 @@ export const createMockSettings = (overrides: Partial<SettingsData> = {}): Setti
     memory: {
       enabled: true,
       provider: MemoryEmbeddingProvider.SentenceTransformers,
+      providerId: undefined,
       model: 'all-MiniLM-L6-v2',
       maxDistance: 0.5,
     },
