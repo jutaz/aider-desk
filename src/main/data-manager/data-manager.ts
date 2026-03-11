@@ -167,7 +167,6 @@ export class DataManager {
       this.db.prepare(sql).run(extensionId, key, JSON.stringify(value));
     } catch (error) {
       logger.error(`Failed to set extension state for ${extensionId}/${key}:`, error);
-      throw error;
     }
   }
 }

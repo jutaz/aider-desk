@@ -848,6 +848,12 @@ export class Agent {
     // Normalize messages for provider-specific requirements
     messages = this.modelManager.normalizeMessages(provider, modelName, messages);
 
+    // Check abort signal before MCP initialization to allow cancellation during slow setup
+    if (effectiveAbortSignal?.aborted) {
+      logger.info('Prompt aborted by user (before MCP init)');
+      return resultMessages;
+    }
+
     let mcpConnectors: McpConnector[] = [];
     try {
       // Lazily initialize MCP clients for the current task
@@ -859,9 +865,41 @@ export class Agent {
         task.addLogMessage('loading', 'Initializing MCP servers...', false, promptContext);
       }, 3000);
 
+      // Timeout for MCP initialization (30 seconds) - linked to abort signal
+      const mcpInitTimeoutMs = 30000;
+      const mcpInitPromise = this.mcpManager.initMcpConnectors(
+        settings.mcpServers,
+        task.getProjectDir(),
+        task.getTaskDir(),
+        false,
+        profile.enabledServers,
+      );
+
+      // Create a combined abort controller that triggers on timeout OR user abort
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        timeoutController.abort();
+        logger.warn('MCP initialization timed out after 30 seconds');
+      }, mcpInitTimeoutMs);
+
+      // Listen for user abort during MCP initialization
+      if (effectiveAbortSignal && !effectiveAbortSignal.aborted) {
+        effectiveAbortSignal.addEventListener('abort', () => {
+          timeoutController.abort();
+        });
+      }
+
       try {
-        mcpConnectors = await this.mcpManager.initMcpConnectors(settings.mcpServers, task.getProjectDir(), task.getTaskDir(), false, profile.enabledServers);
+        mcpConnectors = await Promise.race([
+          mcpInitPromise,
+          new Promise<never>((_, reject) =>
+            timeoutController.signal.addEventListener('abort', () => {
+              reject(new Error('MCP initialization timed out or was aborted'));
+            }),
+          ),
+        ]);
       } finally {
+        clearTimeout(timeoutId);
         clearTimeout(loadingTimeout);
         if (loadingMessageShown) {
           task.addLogMessage('loading', undefined, false, promptContext);
@@ -871,12 +909,18 @@ export class Agent {
       const initTime = Date.now() - initStartTime;
       logger.debug(`MCP servers initialized in ${initTime}ms`);
     } catch (error) {
+      // Check if this was an abort error
+      if (effectiveAbortSignal?.aborted) {
+        logger.info('Prompt aborted by user during MCP initialization');
+        return resultMessages;
+      }
       logger.error('Error initializing MCP clients:', error);
       task.addLogMessage('error', `Error initializing MCP clients: ${error}`, false, promptContext);
     }
 
+    // Check abort signal after MCP initialization (before running agent)
     if (effectiveAbortSignal?.aborted) {
-      logger.info('Prompt aborted by user (before Agent run)');
+      logger.info('Prompt aborted by user (after MCP init)');
       return resultMessages;
     }
 

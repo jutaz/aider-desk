@@ -36,6 +36,9 @@ export class ContextManager {
   private loaded = false;
   private autosaveEnabled = false;
   private readonly storagePath: string;
+  // Mutex for thread-safe message operations
+  private messageOperationLock = false;
+  private messageOperationQueue: Array<() => void> = [];
 
   constructor(
     private readonly task: Task,
@@ -60,9 +63,45 @@ export class ContextManager {
     this.autosaveEnabled = false;
   }
 
+  /**
+   * Acquire lock for message operations to prevent race conditions
+   * @returns Promise that resolves when lock is acquired
+   */
+  private async acquireMessageLock(): Promise<void> {
+    while (this.messageOperationLock) {
+      await new Promise<void>((resolve) => this.messageOperationQueue.push(resolve));
+    }
+    this.messageOperationLock = true;
+  }
+
+  /**
+   * Release lock for message operations
+   */
+  private releaseMessageLock(): void {
+    const next = this.messageOperationQueue.shift();
+    if (next) {
+      next();
+    } else {
+      this.messageOperationLock = false;
+    }
+  }
+
   addContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData): void;
   addContextMessage(message: ContextMessage): void;
   addContextMessage(roleOrMessage: MessageRole | ContextMessage, content?: string, usageReport?: UsageReportData) {
+    // Synchronize message operations
+    this.acquireMessageLock();
+    try {
+      this.addContextMessageInternal(roleOrMessage, content, usageReport);
+    } finally {
+      this.releaseMessageLock();
+    }
+  }
+
+  /**
+   * Internal implementation of addContextMessage without locking
+   */
+  private addContextMessageInternal(roleOrMessage: MessageRole | ContextMessage, content?: string, usageReport?: UsageReportData): void {
     let message: ContextMessage;
 
     if (typeof roleOrMessage === 'string') {
@@ -217,14 +256,19 @@ export class ContextManager {
   }
 
   setContextMessages(contextMessages: ContextMessage[], save = true) {
-    logger.debug('Setting task context messages', {
-      taskId: this.taskId,
-      messages: contextMessages.length,
-      save,
-    });
-    this.messages = contextMessages;
-    if (save) {
-      this.autosave();
+    this.acquireMessageLock();
+    try {
+      logger.debug('Setting task context messages', {
+        taskId: this.taskId,
+        messages: contextMessages.length,
+        save,
+      });
+      this.messages = contextMessages;
+      if (save) {
+        this.autosave();
+      }
+    } finally {
+      this.releaseMessageLock();
     }
   }
 
@@ -256,14 +300,31 @@ export class ContextManager {
   }
 
   clearMessages(save = true) {
-    logger.debug('Clearing task messages', { taskId: this.taskId });
-    this.messages = [];
-    if (save) {
-      this.autosave();
+    this.acquireMessageLock();
+    try {
+      logger.debug('Clearing task messages', { taskId: this.taskId });
+      this.messages = [];
+      if (save) {
+        this.autosave();
+      }
+    } finally {
+      this.releaseMessageLock();
     }
   }
 
   removeMessageById(messageId: string): string[] {
+    this.acquireMessageLock();
+    try {
+      return this.removeMessageByIdInternal(messageId);
+    } finally {
+      this.releaseMessageLock();
+    }
+  }
+
+  /**
+   * Internal implementation of removeMessageById without locking
+   */
+  private removeMessageByIdInternal(messageId: string): string[] {
     // First, try to find a message with the exact ID
     const messageIndex = this.messages.findIndex((msg) => msg.id === messageId);
 
@@ -286,14 +347,14 @@ export class ContextManager {
       }
 
       // Otherwise, remove the whole message
-      return this.removeMessageByIndex(messageIndex, messageId);
+      return this.removeMessageByIndexInternal(messageIndex, messageId);
     }
 
     // If not found by ID, try to find by tool call ID
-    return this.removeByToolCallId(messageId);
+    return this.removeByToolCallIdInternal(messageId);
   }
 
-  private removeMessageByIndex(index: number, messageId: string): string[] {
+  private removeMessageByIndexInternal(index: number, messageId: string): string[] {
     const removedIds: string[] = [];
     removedIds.push(messageId);
 
@@ -344,7 +405,7 @@ export class ContextManager {
     return removedIds;
   }
 
-  private removeByToolCallId(toolCallId: string): string[] {
+  private removeByToolCallIdInternal(toolCallId: string): string[] {
     const removedIds: string[] = [];
 
     // Find tool message with matching toolCallId
@@ -418,6 +479,15 @@ export class ContextManager {
   }
 
   removeLastMessage(): void {
+    this.acquireMessageLock();
+    try {
+      this.removeLastMessageInternal();
+    } finally {
+      this.releaseMessageLock();
+    }
+  }
+
+  private removeLastMessageInternal(): void {
     if (this.messages.length === 0) {
       logger.warn('Attempted to remove last message from task, but message list is empty.', {
         taskId: this.taskId,
@@ -465,6 +535,15 @@ export class ContextManager {
   }
 
   removeMessagesUpToLastUserMessage(): ContextMessage[] {
+    this.acquireMessageLock();
+    try {
+      return this.removeMessagesUpToLastUserMessageInternal();
+    } finally {
+      this.releaseMessageLock();
+    }
+  }
+
+  private removeMessagesUpToLastUserMessageInternal(): ContextMessage[] {
     const lastUserMessageIndex = this.messages.findLastIndex((msg) => msg.role === MessageRole.User);
     if (lastUserMessageIndex === -1) {
       logger.warn('No user message found to remove up to.', {

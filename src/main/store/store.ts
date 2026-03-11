@@ -196,105 +196,119 @@ export class Store {
     if (settingsVersion < CURRENT_SETTINGS_VERSION) {
       logger.info(`Migrating settings from version ${settingsVersion} to ${CURRENT_SETTINGS_VERSION}`);
 
-      if (settingsVersion === 0) {
-        settings = migrateSettingsV0toV1(settings);
-        settingsVersion = 1;
-      }
+      try {
+        if (settingsVersion === 0) {
+          settings = migrateSettingsV0toV1(settings);
+          settingsVersion = 1;
+        }
 
-      if (settingsVersion === 1) {
-        settings = migrateSettingsV1toV2(settings);
-        settingsVersion = 2;
-      }
+        if (settingsVersion === 1) {
+          settings = migrateSettingsV1toV2(settings);
+          settingsVersion = 2;
+        }
 
-      if (settingsVersion === 2) {
-        settings = migrateSettingsV2toV3(settings);
-        settingsVersion = 3;
-      }
+        if (settingsVersion === 2) {
+          settings = migrateSettingsV2toV3(settings);
+          settingsVersion = 3;
+        }
 
-      if (settingsVersion === 3) {
-        settings = migrateSettingsV3toV4(settings);
-        openProjects = migrateOpenProjectsV3toV4(openProjects);
-        settingsVersion = 4;
-      }
+        if (settingsVersion === 3) {
+          settings = migrateSettingsV3toV4(settings);
+          openProjects = migrateOpenProjectsV3toV4(openProjects);
+          settingsVersion = 4;
+        }
 
-      if (settingsVersion === 4) {
-        settings = migrateSettingsV4toV5(settings);
-        settingsVersion = 5;
-      }
+        if (settingsVersion === 4) {
+          settings = migrateSettingsV4toV5(settings);
+          settingsVersion = 5;
+        }
 
-      if (settingsVersion === 5) {
-        settings = migrateSettingsV5toV6(settings);
-        settingsVersion = 6;
-      }
+        if (settingsVersion === 5) {
+          settings = migrateSettingsV5toV6(settings);
+          settingsVersion = 6;
+        }
 
-      if (settingsVersion === 6) {
-        settings = migrateV6ToV7(settings);
-        settingsVersion = 7;
-      }
+        if (settingsVersion === 6) {
+          settings = migrateV6ToV7(settings);
+          settingsVersion = 7;
+        }
 
-      if (settingsVersion === 7) {
-        settings = migrateV7ToV8(settings);
-        settingsVersion = 8;
-      }
+        if (settingsVersion === 7) {
+          settings = migrateV7ToV8(settings);
+          settingsVersion = 8;
+        }
 
-      if (settingsVersion === 8) {
-        settings = migrateV8ToV9(settings);
-        settingsVersion = 9;
-      }
+        if (settingsVersion === 8) {
+          settings = migrateV8ToV9(settings);
+          settingsVersion = 9;
+        }
 
-      if (settingsVersion === 9) {
-        settings = migrateV9ToV10(settings);
-        settingsVersion = 10;
-      }
+        if (settingsVersion === 9) {
+          settings = migrateV9ToV10(settings);
+          settingsVersion = 10;
+        }
 
-      if (settingsVersion === 10) {
-        settings = migrateV10ToV11(settings);
-        settingsVersion = 11;
-      }
+        if (settingsVersion === 10) {
+          settings = migrateV10ToV11(settings);
+          settingsVersion = 11;
+        }
 
-      if (settingsVersion === 11) {
-        settings = migrateV11ToV12(settings);
-        settingsVersion = 12;
-      }
+        if (settingsVersion === 11) {
+          settings = migrateV11ToV12(settings);
+          settingsVersion = 12;
+        }
 
-      if (settingsVersion === 12) {
-        settings = migrateV12ToV13(settings);
-        settingsVersion = 13;
-      }
+        if (settingsVersion === 12) {
+          settings = migrateV12ToV13(settings);
+          settingsVersion = 13;
+        }
 
-      if (settingsVersion === 13) {
-        providers = migrateProvidersV13toV14(settings);
-        settingsVersion = 14;
-      }
+        if (settingsVersion === 13) {
+          providers = migrateProvidersV13toV14(settings);
+          settingsVersion = 14;
+        }
 
-      if (settingsVersion === 14) {
-        settings = migrateSettingsV14toV15(settings);
-        settingsVersion = 15;
-      }
+        if (settingsVersion === 14) {
+          settings = migrateSettingsV14toV15(settings);
+          settingsVersion = 15;
+        }
 
-      if (settingsVersion === 15) {
-        settings = migrateSettingsV15toV16(settings);
-        settingsVersion = 16;
-      }
+        if (settingsVersion === 15) {
+          settings = migrateSettingsV15toV16(settings);
+          settingsVersion = 16;
+        }
 
-      if (settingsVersion === 16) {
-        settings = await migrateSettingsV16toV17(settings);
-        settingsVersion = 17;
-      }
+        if (settingsVersion === 16) {
+          settings = await migrateSettingsV16toV17(settings);
+          settingsVersion = 17;
+        }
 
-      if (settingsVersion === 17) {
-        settings = migrateSettingsV17toV18(settings);
-        settingsVersion = 18;
-      }
+        if (settingsVersion === 17) {
+          settings = migrateSettingsV17toV18(settings);
+          settingsVersion = 18;
+        }
 
-      if (settingsVersion === 18) {
-        settings = migrateSettingsV18toV19(settings);
-        settingsVersion = 19;
-      }
+        if (settingsVersion === 18) {
+          settings = migrateSettingsV18toV19(settings);
+          settingsVersion = 19;
+        }
 
-      this.store.set('settings', settings as SettingsData);
-      this.store.set('openProjects', openProjects || []);
-      this.store.set('providers', providers);
+        this.store.set('settings', settings as SettingsData);
+        this.store.set('openProjects', openProjects || []);
+        this.store.set('providers', providers);
+      } catch (error) {
+        // If migration fails, fall back to default settings to prevent app crashes
+        logger.error('Migration failed, falling back to default settings:', {
+          error: error instanceof Error ? error.message : String(error),
+          failedVersion: settingsVersion,
+        });
+        settings = this.createDefaultSettings();
+        this.store.set('settings', settings);
+        this.store.set('openProjects', []);
+        this.store.set('providers', []);
+        this.store.set('settingsVersion', CURRENT_SETTINGS_VERSION);
+        return settings;
+      }
     }
 
     this.store.set('settingsVersion', CURRENT_SETTINGS_VERSION);

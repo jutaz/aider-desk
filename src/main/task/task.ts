@@ -127,7 +127,7 @@ export class Task {
   private autocompletionAllFiles: string[] | null = null;
   private agentRunResolves: (() => void)[] = [];
   private git: SimpleGit | null = null;
-  private responseChunkMap: Map<string, { buffer: string; interval: NodeJS.Timeout }> = new Map();
+  private responseChunkMap: Map<string, { buffer: Array<{ content: string; sequenceNumber: number }>; interval: NodeJS.Timeout }> = new Map();
   private isDeterminingTaskState = false;
   private resolutionAbortControllers: Record<string, AbortController> = {};
   private tokensInfo: TokensInfoData;
@@ -535,6 +535,9 @@ export class Task {
     }
     await this.interruptResponse();
     this.resolveAgentRunPromises();
+    this.resolvePromptPromises();
+    this.resolveQuestionPromises();
+    this.cleanupResolutionAbortControllers();
     this.cleanupChunkBuffers();
 
     await this.aiderManager.kill();
@@ -600,6 +603,36 @@ export class Task {
         resolve();
       }
     }
+  }
+
+  private resolvePromptPromises() {
+    // Resolve all pending prompt promises with empty results to prevent memory leaks
+    while (this.runPromptResolves.length) {
+      const resolve = this.runPromptResolves.shift();
+      if (resolve) {
+        resolve([]);
+      }
+    }
+  }
+
+  private resolveQuestionPromises() {
+    // Resolve all pending question promises to prevent memory leaks
+    while (this.currentQuestionResolves.length) {
+      const resolve = this.currentQuestionResolves.shift();
+      if (resolve) {
+        resolve(['', undefined]);
+      }
+    }
+    this.currentQuestion = null;
+  }
+
+  private cleanupResolutionAbortControllers() {
+    // Abort all pending resolution operations and clear the controllers
+    for (const [id, abortController] of Object.entries(this.resolutionAbortControllers)) {
+      abortController.abort();
+      logger.debug('Aborted resolution controller during cleanup', { id });
+    }
+    this.resolutionAbortControllers = {};
   }
 
   private isPromptRunning() {
@@ -1202,12 +1235,15 @@ export class Task {
         }
       };
 
+      const sequenceNumber = message.sequenceNumber ?? 0;
+
       if (!this.responseChunkMap.has(message.id)) {
         // First chunk: send immediately and create interval
         logger.debug('Sending first chunk', {
           baseDir: this.project.baseDir,
           taskId: this.taskId,
           messageId: message.id,
+          sequenceNumber,
         });
         await sendResponseChunk(message.content);
 
@@ -1215,14 +1251,17 @@ export class Task {
         const interval = setInterval(async () => {
           const entry = this.responseChunkMap.get(messageId);
           if (entry && entry.buffer.length > 0) {
-            await sendResponseChunk(entry.buffer);
+            // Sort chunks by sequence number before sending to preserve order
+            entry.buffer.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+            const combinedContent = entry.buffer.map((b) => b.content).join('');
+            await sendResponseChunk(combinedContent);
             logger.debug('Sending buffered chunk', {
               baseDir: this.project.baseDir,
               taskId: this.taskId,
               messageId: message.id,
-              chunk: entry.buffer,
+              chunksCount: entry.buffer.length,
             });
-            entry.buffer = '';
+            entry.buffer = [];
           } else {
             logger.debug('No buffered chunk, stopping interval', {
               baseDir: this.project.baseDir,
@@ -1239,16 +1278,17 @@ export class Task {
           taskId: this.taskId,
           messageId: message.id,
         });
-        this.responseChunkMap.set(messageId, { buffer: '', interval });
+        this.responseChunkMap.set(messageId, { buffer: [], interval });
       } else {
-        logger.debug('Appending to buffer', {
+        logger.debug('Buffering chunk', {
           baseDir: this.project.baseDir,
           taskId: this.taskId,
           messageId: message.id,
+          sequenceNumber,
         });
-        // Subsequent chunks: append to buffer
+        // Subsequent chunks: add to buffer with sequence number
         const entry = this.responseChunkMap.get(message.id)!;
-        entry.buffer += message.content;
+        entry.buffer.push({ content: message.content, sequenceNumber });
       }
     } else {
       const entry = this.responseChunkMap.get(message.id);
@@ -2203,6 +2243,19 @@ export class Task {
     this.agent.interrupt();
     this.promptFinished();
     this.cleanupChunkBuffers();
+
+    // Kill the aider process to ensure cancellation is effective
+    if (this.aiderManager.isStarted()) {
+      try {
+        await this.aiderManager.kill();
+      } catch (error) {
+        logger.warn('Failed to kill aider process during interrupt:', {
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     if (this.initialized && this.task.state === DefaultTaskState.InProgress) {
       if (this.isDeterminingTaskState) {
