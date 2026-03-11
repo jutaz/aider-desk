@@ -159,6 +159,9 @@ export const useTaskStore = createWithEqualityFn<TaskStore>(
         }
         newStateMap.set(taskId, { ...current, ...update });
         newMessagesMap.set(taskId, []);
+        // Clear pending messages to prevent race conditions where stale pending
+        // messages could be flushed after session is cleared
+        taskPendingMessages.delete(taskId);
         return { taskStateMap: newStateMap, taskMessagesMap: newMessagesMap };
       }),
   }),
